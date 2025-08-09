@@ -1,0 +1,165 @@
+# -*- coding: utf-8 -*-
+# -*- mode: org -*-
+#+startup: beamer overview indent
+#+LANGUAGE: pt-br
+#+TAGS: noexport(n)
+#+EXPORT_EXCLUDE_TAGS: noexport
+#+EXPORT_SELECT_TAGS: export
+
+#+Title: Análise de Desempenho
+#+Subtitle: *INF01146*
+#+Author: Prof. Lucas Mello Schnorr
+#+Date: \copyleft
+
+#+LaTeX_CLASS: beamer
+#+LaTeX_CLASS_OPTIONS: [xcolor=dvipsnames,10pt]
+#+OPTIONS: H:1 num:t toc:nil \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+#+LATEX_HEADER: \input{org-babel.tex}
+
+* O professor
+
+Prof. Lucas M. Schnorr -- schnorr@inf.ufrgs.br
+
+* Funcionamento das aulas
+
+As aulas são majoritariamente expositivas, com discussão.
+
+A presença será aferida (75% de frequência evita FF)
+- São 30 encontros no total, portanto 8 faltas implica em FF
+
+#+latex: \vfill
+
+Perguntar sempre em caso de dúvida
+- seja ator do teu aprendizado
+
+* Abono de frequência por razões de saúde
+
+#+latex: \scalebox{0.9}{\vbox{
+Recuperação de frequência ou atividades avaliativas por licença médica.
+
+Os casos de licença médica do aluno ou para atendimento de familiar
+que afetem atividades avaliativas devem ser encaminhados ao
+Departamento de Atenção a Saúde da UFRGS seguindo orientações deste
+link: https://www.ufrgs.br/das/pericia-oficial-em-saude-alunos/
+
+Para solicitar a Licença para Tratamento de Saúde, o aluno deve
+encaminhar a documentação médica (atestado original ou cópia
+autenticada com o CID -- Codigo Internacional de Doenças) para o
+e-mail: atestadosalunos@ufrgs.br e solicitar avaliação. O documento
+será analisado e os atestados médicos/odontológicos que solicitarem
+até cinco dias corridos de afastamento (computados fins de semana e
+feriados) poderão ser registrados com dispensa de perícia.
+
+No corpo do e-mail em que foi enviado o atestado, devem constar
+informados os seguintes dados: nome completo, número do cartão UFRGS,
+curso, telefone para contato.
+
+Caso haja necessidade de agendamento de perícia, você será informado,
+através do seu e-mail, da data e do horário de comparecimento ao
+Departamento de Atenção à Saúde para a realização do exame pericial. O
+DAS envia ao professor o período do afastamento, sem compartilhar
+nenhuma informação pessoal do estudante.
+
+IMPORTANTE: Aulas abonadas não constam como presença; O estudante deve
+combinar com o professor a recuperação das atividades avaliativas.
+#+latex: }}
+
+* Plano, cronograma, bibliografia, projeto
+
++ Súmula, conteúdo programático, bibliografia e cronograma
++ Procedimentos didáticos, laboratórios
++ Trabalhos, provas e avaliação
+
+#+begin_center
+Consulte no Portal do Aluno da UFRGS, ou uma cópia no moodle
+#+end_center
+
+#+latex: \vfill
+
+Vamos revisar os pontos juntos!
+
+* Bibliografia
+
+Básica Essencial
+
+- Jain, Raj. The art of computer systems performance analysis:
+  techniques for experimental design, measurement, simulation, and
+  modeling. New York: John Wiley, c1991. ISBN 0471503363.
+
+Extras
+
+- Applied Statistics and Probability for Engineers 6th
+  Edition. Douglas C. Montgomery (Author), George C. Runger. Wiley.
+
+* Avaliação
+
+*Duas provas* (P1 e P2)
+- Testará os aspectos teóricos da disciplina
+- As provas englobam os assuntos vistos até então
+  - Principalmente dissertativas
+
+*Trabalho Final* (TF)
+- Escolha de estudo de caso de análise
+- Apresentação para o grupo no final
+
+*Participação* (PA)
+- Tornar as aulas mais dinâmicas
+- Questionamentos, discussão
+
+#+latex: \vfill\pause
+
+#+BEGIN_CENTER
+Nota final
+
+P1 \times 0.30 + P2 \times 0.30 + TF \times 0.30 + PA \times 0.10
+#+END_CENTER
+
+#+latex: \pause
+
+#+BEGIN_CENTER
+Mapeamento para conceito
+
+9.0 -- 10.0 \to A
+
+7.5 -- 8.9 \to B
+
+6.0 -- 7.4 \to C
+
+0.0 -- 5.9 \to D
+#+END_CENTER
+
+* Recuperação
+
+Ao final da disciplina, aqueles alunos que não tiverem apresentado
+aproveitamento suficiente para a aprovação, poderão realizar uma
+atividade de recuperação.  O conceito obtido na atividade de
+recuperação será usada para substituir aquele de uma das verificações
+de aprendizagem.  A atividade de recuperação poderá versar sobre
+qualquer dos conteúdos apresentados na disciplina.
+
+* Acompanhamento
+
+#+BEGIN_CENTER
+Aulas.
+
+Moodle da UFRGS
+#+END_CENTER
+
+#+latex: \vfill
+
+Em dúvidas
+- Seja ator do teu aprendizado
+- Discuta com os colegas
+- Converse com os professores
+
+* Cronograma
+
+_Cronograma_
+
+#+latex: \bigskip
+
+Verifique Moodle
+
+#+latex: \bigskip
+
+Vamos revisá-lo juntos.
