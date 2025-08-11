@@ -128,6 +128,33 @@ Mapeamento para conceito
 0.0 -- 5.9 \to D
 #+END_CENTER
 
+* Trabalho Final (TF)
+
+O melhor jeito de aprender é aplicar os conceitos em um sistema real.
+
+#+begin_quote
+It is recommended that courses on performance evaluation include at
+least one project where student teams are required to select a
+computer subsystem, for example, a network mail program, an operating
+system, a language compiler, a text editor, a processor, or a
+database. They should also be required to perform some measurements,
+analyze the collected data, simulate or analytically model the
+subsystem, predict its performance, and validate the model. Student
+teams are preferable to individual student projects since most
+real-life projects require coordination and communication with several
+other people.
+#+end_quote
+
+Alguns exemplos de trabalhos
+- Simular e comparar o desempenho de dois tipos de redes de interconexão
+- Medir e analisar o desempenho de dois processadores
+- Caracterizar a carga de trabalho em um parque computacional
+- Medir e identificar os fatores que afetam a desempenho de um sistema GC
+- Construir um monitor para observar o desempenho em um sistema
+- Modelar o desempenho de um programa
+- Comparar experimentalmente o desempenho de dois algoritmos alternativos
+- Averiguar o efeito do paralelismo em um programa de computador
+
 * Recuperação
 
 Ao final da disciplina, aqueles alunos que não tiverem apresentado
