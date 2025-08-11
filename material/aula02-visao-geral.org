@@ -1,0 +1,178 @@
+# -*- coding: utf-8 -*-
+# -*- mode: org -*-
+#+startup: beamer overview indent
+#+LANGUAGE: pt-br
+#+TAGS: noexport(n)
+#+EXPORT_EXCLUDE_TAGS: noexport
+#+EXPORT_SELECT_TAGS: export
+
+#+Title: Análise de Desempenho
+#+SubTitle: Visão Geral
+#+Author: Prof. Lucas Mello Schnorr
+#+Date: \copyleft
+
+#+LaTeX_CLASS: beamer
+#+LaTeX_CLASS_OPTIONS: [xcolor=dvipsnames,10pt]
+#+OPTIONS: H:1 num:t toc:nil \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+#+LATEX_HEADER: \input{org-babel.tex}
+
+* Por que avaliar desempenho?
+
+- Objetivo: obter maior desempenho ao menor custo
+  #+begin_quote
+  This goal has resulted in continuing evolution of higher performance
+  and lower cost systems leading to today’s proliferation of
+  workstations and personal computers, many of which have better
+  performance than earlier supercomputers.
+  #+end_quote
+- Importância
+  - Competitividade da indústria
+  - Escolha do melhor custo-benefício
+  - Apoio ao projeto, compra e uso de sistemas
+- Necessário em todo ciclo de vida
+  - Projeto → Fabricação → Venda/Compra → Uso → Atualização
+
+* Desafios
+
+- Não existe medida padrão universal
+- Enorme variabilidade de
+  - Aplicações
+  - Ambientes de medição
+  - Técnicas de avaliação
+- Primeiro passo (dado um objeto computacional): escolher
+  - Métricas corretas
+  - Ambiente adequado
+  - Técnica apropriada
+
+* Problemas que poderemos resolver
+
+1. Selecionar métricas, workloads e técnicas adequadas
+2. Medir desempenho corretamente
+3. Comparar alternativas com estatística
+   #+caption: Pacotes perdidos em dois links de interconexão
+   #+attr_latex: booktabs t
+   | Tamanho do arquivo | Link A | Link B |
+   |--------------------+--------+--------|
+   |               1000 |      5 |     10 |
+   |               1200 |      7 |      3 |
+   |               1300 |      3 |      0 |
+   |                 50 |      0 |      1 |
+4. Projetar experimentos eficientes
+   - Coletar a maior quantidade de informação com o menor esforço
+5. Executar simulações corretamente
+6. Usar modelos de filas para análise
+
+* Exemplos de métricas
+
+- Tempo de resposta (de micro-serviços)
+- Vazão /Throughput/ (em transações/segundo por exemplo)
+- Taxa de perda de pacotes (rede de interconexão)
+- Utilização de recursos (capacidade computacional)
+- Tamanho médio da fila (em um gerenciador de /jobs/)
+
+* Técnicas de avaliação
+
+- Medição
+  - Ferramentas: load generators e monitors
+- Simulação
+  - Modelos, geradores de números aleatórios, duração da simulação
+- Modelagem analítica
+  - Modelos de filas, redes de filas, equações de desempenho
+
+* A arte da avaliação de desempenho
+
+- Não é um processo mecânico
+- Requer
+  - Conhecimento profundo do sistema
+  - Seleção cuidadosa de métricas e workloads
+  - Interpretação criteriosa de dados
+- Analistas diferentes → decisões diferentes
+- Exemplo: /Jogo da Razão/
+
+#+latex: \pause
+
+#+caption: Vazão em transações/segundo
+#+attr_latex: :booktabs t
+| Sistema | Carga de Trabalho #1 | Carga de Trabalho #2 |
+|---------+----------------------+----------------------|
+| A       |                   20 |                   10 |
+| B       |                   10 |                   20 |
+
+Qual é o melhor?
+
+* Três visões diferentes
+
+#+caption: Comparando pela vazão média
+#+attr_latex: :booktabs t
+| Sistema | Carga de Trabalho #1 | Carga de Trabalho #2 | Média |
+|---------+----------------------+----------------------+-------|
+| A       |                   20 |                   10 |    15 |
+| B       |                   10 |                   20 |    15 |
+
+#+latex: \pause
+
+#+caption: Vazão usando o sistema B como referência
+#+attr_latex: :booktabs t
+| Sistema | Carga de Trabalho #1 | Carga de Trabalho #2 | Média |
+|---------+----------------------+----------------------+-------|
+| A       |                    2 |                  0.5 |  1.25 |
+| B       |                    1 |                    1 |     1 |
+
+#+latex: \pause
+
+#+caption: Vazão usando o sistema A como referência
+#+attr_latex: :booktabs t
+| Sistema | Carga de Trabalho #1 | Carga de Trabalho #2 | Média |
+|---------+----------------------+----------------------+-------|
+| A       |                    1 |                    1 |     1 |
+| B       |                  0.5 |                    2 |  1.25 |
+
+* Jogos e erros comuns
+
+- Escolha seletiva de workloads
+- Apresentação enviesada de resultados
+- Falta de controle de variabilidade
+- Objetivo: evitar armadilhas aplicando a metodologia correta
+
+* Comunidades e recursos
+
+- ACM SIGMETRICS, IEEE Computer Society, CMG, IFIP WG 7.3
+- Sociedades de Simulação (SCS, SIAM, ORSA)
+- Conferências
+  - SIGMETRICS (ACM)
+  - PERFORMANCE
+  - CMG
+  - Winter Simulation Conference
+  - ACM/SPEC International Conference on Performance Engineering
+- Revistas
+  - Performance Evaluation Review (PER ACM)
+  - Performance Evaluation (PE Elsevier)
+  - Simulation
+  - CMG Transactions
+  - SIAM Review
+  - Operations Research
+
+* Projetos de avaliação
+
+- Medir, modelar e prever desempenho
+- Trabalhar em equipe
+- Exemplos
+  - Comparar microprocessadores
+  - Caracterizar workload de um sistema
+  - Simular algoritmos de coleta de lixo
+  - Analisar protocolos de rede
+- Meta: gerar insights não óbvios
+
+* Mensagem Final
+
+- Avaliação de desempenho = técnica + arte
+- Escolha correta de métricas, workloads e métodos é essencial
+- Conhecimento das jogadas e armadilhas evita conclusões erradas
+- Aplicação prática solidifica o aprendizado
+
+* Referência
+
+- Capítulo 1
+  - Jain, Raj. The art of computer systems performance analysis:
+    techniques for experimental design, measurement, simulation, and
+    modeling. New York: John Wiley, c1991. ISBN 0471503363.

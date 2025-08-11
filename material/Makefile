@@ -1,4 +1,4 @@
-ORIGINAL=aula01-apresentacao.pdf
+ORIGINAL=aula01-apresentacao.pdf aula02-visao-geral.pdf
 
 all: $(ORIGINAL)
 
