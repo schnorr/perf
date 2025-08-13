@@ -1,0 +1,386 @@
+# -*- coding: utf-8 -*-
+# -*- mode: org -*-
+#+startup: beamer overview indent
+#+LANGUAGE: pt-br
+#+TAGS: noexport(n)
+#+EXPORT_EXCLUDE_TAGS: noexport
+#+EXPORT_SELECT_TAGS: export
+
+#+Title: Análise de Desempenho
+#+SubTitle: Erros comuns e os passos para uma abordagem sistemática
+#+Author: Prof. Lucas Mello Schnorr
+#+Date: \copyleft
+
+#+LaTeX_CLASS: beamer
+#+LaTeX_CLASS_OPTIONS: [xcolor=dvipsnames,10pt]
+#+OPTIONS: H:1 num:t toc:nil \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+#+LATEX_HEADER: \input{org-babel.tex}
+
+* Os três métodos para análise de desempenho
+
+*Modelagem analítica*
+- Representação matemática do sistema
+- Boa para estudos teóricos e obtenção rápida de insights
+- Requer simplificações, menos realismo
+
+#+latex: \pause
+
+*Simulação*
+- Criação de um modelo que imita o sistema
+- Permite testar cenários variados, mesmo sem o sistema físico
+- Flexível, mas requer (in)validação e pode ser lenta
+
+#+latex: \pause
+  
+*Medição*
+- Coleta de dados no sistema real
+- Útil quando o sistema já existe e pode ser instrumentado
+- Alta precisão, mas pode ser cara e demorada
+
+* Jogos de razão: três conclusões diferentes
+
+#+attr_latex: :booktabs t
+| *Método* | *Sistema* | *Carga #1* | *Carga #2* | *Média* |
+|--------+---------+----------+----------+-------|
+| Média  | A       |       20 |       10 |    15 |
+| Média  | B       |       10 |       20 |    15 |
+|--------+---------+----------+----------+-------|
+| Ref. B | A       |        2 |      0.5 |  1.25 |
+| Ref. B | B       |        1 |        1 |     1 |
+|--------+---------+----------+----------+-------|
+| Ref. A | A       |        1 |        1 |     1 |
+| Ref. A | B       |      0.5 |        2 |  1.25 |
+
+#+latex: \vfill
+
+Qual escolher? :)
+
+#+latex: \vfill\pause
+
+Alguns jogos são intencionais, outros são por falta de conhecimento
+- _Conhecer erros comuns_ \to perceber a necessidade de uma boa metodologia
+
+* Erros Comuns
+
+Reconhecer para evitá-los
+1. Sem objetivos
+2. Objetivos enviasados
+3. Abordagem não sistemática
+4. Analisar sem entender o problema
+5. Empregar métricas incorretas
+6. Usar uma carga de trabalho não representativa
+7. Empregar a técnica de avaliação inadequada
+
+#+latex: \vfill
+
+Vamos detalhá-los assim
+- o problema de cada um
+- as consequências típicas
+- as boas práticas para mitigá-los
+
+* Erro 1: Sem objetivos
+
+Em avaliação de desempenho
+- Muitos começam sem metas definidas
+  1. Analista de desempenho começa a modelar ou simular o projeto
+  2. Sobre os objetivos, o modelo vai ajudar a responder as questões do projeto
+
+Modelos analíticos ``genéricos'' inexistem \to cada caso exige foco específico
+
+#+latex: \pause\vfill
+
+Antes de modelar, simular ou medir
+- Entender o sistema
+- Identificar o problema a resolver
+
+#+latex: \pause\vfill
+
+Definir objetivos não é trivial
+- Problemas iniciais podem ser vagos
+- Ex.: de ``timeout em retransmissões'' → ``controle de congestionamento''
+
+#+latex: \vfill
+
+#+begin_center
+*Problema bem definido → solução mais fácil*
+#+end_center
+
+* Erro 2: Objetivos enviesados
+
+O problema
+- Objetivo definido para ``provar'' que o nosso sistema é melhor
+- Escolha de métricas e workloads para favorecer um lado
+
+Consequências
+- Comparações distorcidas
+- Resultados sem credibilidade
+
+#+latex: \vfill\pause
+
+** Exemplo típico de comparação contra o estado da arte            :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+- Compara-se sem que as alternativas estejam bem configuradas
+    
+#+latex: \vfill\pause
+
+** Boas práticas                                                   :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+- Atuar como um júri: tentar abordar a questão sem preconceitos
+- Basear conclusões em dados e análises, não em crenças
+- Selecionar métricas e workloads adequados para os sistemas
+  - Quando se estão comparando sistemas
+
+* Erro 3: Abordagem não sistemática
+
+O problema
+- Parâmetros, fatores, métricas e workloads escolhidos de forma arbitrária
+- Alto risco de conclusões incorretas
+Consequência
+- Análises incoerentes ou inconsistentes
+
+#+latex: \vfill\pause
+
+** Boa práticas, um processo sistemático                           :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+1. Definir objetivos claros
+2. Identificar todos os parâmetros do sistema
+3. Listar fatores relevantes
+4. Escolher métricas adequadas
+5. Selecionar workloads representativos
+
+* Erro 4: Analisar sem entender o problema
+
+O problema
+- Constroem-se modelos e geram números antes de compreender a questão
+- Falta de foco na definição do problema
+
+#+latex: \vfill\pause
+
+Lembrar que
+- Modelo != objetivo final \to o modelo serve para chegar às conclusões
+- Modelos podem ser totalmente ignorados por tomadores de decisão que
+  buscam respostas (o fim), não apenas modelos de desempenho (o caminho)
+
+#+begin_quote
+\to /Problema bem definido é meio caminho andado/
+#+end_quote
+
+#+latex: \vfill\pause
+
+** Boa práticas                                                    :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+- Uma boa parte do esforço deve ser gasto na definição clara do problema
+- Compreender profundamente o sistema e o problema antes de modelar
+- Investir tempo em formular a questão certa
+
+* Erro 5: Métricas incorretas
+
+O problema
+- Escolher métricas fáceis de medir ou calcular, mas irrelevantes para o caso
+- Comparações incorretas entre sistemas diferentes, por exemplo
+  - CPUs comparadas por MIPS (milhões de instruções por segundo)
+  - Inadequado para arquiteturas diferentes (RISC vs. CISC)
+
+#+latex: \vfill\pause
+
+Consequências
+- Conclusões distorcidas ou enganosas
+- Possibilidade de manipulação de resultados via escolha de métricas
+
+#+latex: \vfill\pause
+
+** Boa práticas                                                    :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+- Selecionar métricas relevantes para os serviços do sistema ou subsistema
+- Considerar métricas difíceis de calcular, se forem mais representativas
+
+* Erro 6: Carga de trabalho não representativa
+
+O problema
+- Workload usado nos testes não reflete o uso real do sistema
+- Resultados obtidos não tem nada a ver quando em produção; exemplos
+  - Teste realizado apenas com um tipo de pacote → conclusões erradas
+  - Teste realizado com carga pequena \to em produção a carga é grande
+
+#+latex: \vfill\pause
+
+Consequências
+- Avaliação distorcida
+- Comparações injustas entre sistemas
+
+#+latex: \vfill\pause
+
+** Boa práticas                                                    :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+
+- Reproduzir no teste a distribuição real da carga de trabalho, dos dados
+- Evitar ``benchmarking games'' para favorecer um sistema
+  - Jogos empregados para mostrar a superioridade de um sistema
+
+* Erro 7: Técnica de avaliação de desempenho inadequada
+
+O problema
+- Uso sempre da mesma técnica preferida (viés por familiaridade)
+- Técnica para chegar rápido em algo, não para resolver o problema
+  - Especialista em teoria de filas transforma todo problema em modelo de filas
+  - Programador opta sempre por simulação, mesmo quando medição é viável
+  - Desenvolvedor de uma ferramenta de /log/ acha que logar tudo resolverá
+
+#+latex: \vfill\pause
+
+Consequências
+- Introdução de fenômenos inexistentes no sistema real
+- Técnica errada pode distorcer ou omitir fenômenos importantes
+
+#+latex: \vfill\pause
+
+** Boa prática
+- Conhecer /bem/ as três técnicas: medição, simulação e modelagem analítica
+- Escolher a técnica pela adequação ao problema, não à preferência pessoal
+
+* Exercício para a turma: escolha da técnica
+Para cada cenário abaixo
+1. Identifique as restrições e características do sistema
+2. Identifique _qual seria a técnica de análise de desempenho é mais apropriada_
+
+Questões para considerar
+- O sistema está em operação ou ainda está em fase de projeto?
+- É possível instrumentar para obter medições diretas?
+- Há complexidade, escala, ou variabilidade alta que exige simulação?
+- O objetivo é obter entendimento rápido ou previsões precisas?
+
+#+latex: \vfill\pause
+
+** *Cenários*                                                        :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+1. Sistema de controle de tráfego aéreo já em operação
+   - precisamos avaliar o impacto de uma nova rota \pause
+2. Novo processador ainda em fase de projeto, sem protótipo
+   físico \pause
+3. Data center em funcionamento
+   - avaliar o tempo médio de resposta sob diferentes cargas \pause
+5. Rede de sensores IoT para monitoramento ambiental de uma floresta
+   - em fase de especificação conceitual \pause
+6. Novo algoritmo de escalonamento para GPU, com protótipo, sem hardware
+   - avaliar o desempenho com uma nova carga de trabalho
+
+* Cinco passos comuns para avaliação de desempenho 1/3
+
+** 1. Definir objetivos e delimitar o sistema                      :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+- Definir metas claras do estudo
+- Delimitar os limites do sistema conforme os objetivos
+
+#+latex: \vfill\pause
+
+** 2. Listar serviços e resultados                                 :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+   - Identificar serviços oferecidos pelo sistema
+   - Listar possíveis resultados (desejáveis e indesejáveis)
+   - Exemplo: Banco de dados fornece respostas corretas, incorretas ou falha
+
+#+latex: \vfill\pause
+
+** 3. Selecionar métricas                                          :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+   - Critérios para comparar desempenho: velocidade, precisão, disponibilidade
+   - Exemplos
+     - Rede → throughput, delay, taxa de erro
+     - Processador → tempo de execução de instruções
+     - Escalonador \to uso mais eficiente dos recursos
+     - Monitor \to menor intrusão (efeito de sonda) possível
+     - Paralelismo \to aceleração linear, /strong scaling/
+       
+* Cinco passos comuns para avaliação de desempenho 2/3
+** 4. Listar todos os parâmetros que afetam o desempenho           :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+
+Parâmetros do sistema
+- Incluem hardware e software
+- Tipicamente constantes entre diferentes instalações
+Parâmetros de entrada
+- Características das requisições dos usuários, dos dados de entrada
+- Variam conforme a instalação do sistema, seu contexto
+
+#+latex: \vspace{1cm}\pause
+A lista pode não estar completa inicialmente
+- Parâmetros adicionais podem ser descobertos durante a análise
+- É importante manter itens da lista o mais abrangente possível
+
+#+latex: \pause
+Benefícios
+- Facilita discussão sobre impacto desses parâmetros
+- Ajuda a determinar quais dados precisam ser coletados antes ou durante
+
+* Cinco passos comuns para avaliação de desempenho 3/3
+   
+** 5. Selecionar fatores para estudo                               :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+
+A lista de parâmetros (passo anterior) é composta de *fatores*
+- Fatores possuem valores chamados *níveis*
+Tipicamente, em cenários reais, a lista de fatores e níveis é gigante
+- Estudá-los todos se torna rapidamente inviável (custo alto)
+
+#+latex: \vfill\pause
+
+Estratégia recomendada
+- Começar com poucos fatores e poucos níveis
+  - Priorizar fatores com maior impacto  
+- Expandir a lista em fases posteriores, se possível
+- Considerar restrições econômicas e tecnológicas
+  - Tempo disponível para a decisão
+  - Limitações de controle de parâmetros
+
+* Exemplo do gerenciamento de fatores
+
+#+begin_quote
+Millani, L.F. (2017). Computation-Aware Dynamic Frequency
+Scaling: Parsimonious Evaluation of the Time-Energy Trade-Off Using
+Design of Experiments. Euro-Par 2016: Parallel Processing
+Workshops.Springer, Cham. DOI: =10.1007/978-3-319-58943-5_47=
+#+end_quote
+
+Fatores: Regiões paralelas de código (identificadas pelas letras do alfabeto)
+
+Níveis: Frequência do processador
+
+[[./img/parsimonious-two-phase.png]]
+
+* Referências
+
+- Capítulo 2. Jain, Raj. The art of computer systems performance
+  analysis: techniques for experimental design, measurement,
+  simulation, and modeling. New York: John Wiley,
+  c1991. ISBN 0471503363.
+- Millani, L.F., Mello Schnorr, L. (2017). Computation-Aware Dynamic
+  Frequency Scaling: Parsimonious Evaluation of the Time-Energy
+  Trade-Off Using Design of Experiments. In: Desprez, F., et
+  al. Euro-Par 2016: Parallel Processing
+  Workshops. Euro-Par 2016. Lecture Notes in Computer Science(),
+  vol 10104. Springer,
+  Cham. https://doi.org/10.1007/978-3-319-58943-5_47
