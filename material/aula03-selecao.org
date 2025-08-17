@@ -1,0 +1,216 @@
+# -*- coding: utf-8 -*-
+# -*- mode: org -*-
+#+startup: beamer overview indent
+#+LANGUAGE: pt-br
+#+TAGS: noexport(n)
+#+EXPORT_EXCLUDE_TAGS: noexport
+#+EXPORT_SELECT_TAGS: export
+
+#+Title: Análise de Desempenho
+#+SubTitle: Selection of Techniques and Metrics
+#+Author: Prof. Lucas Mello Schnorr
+#+Date: \copyleft
+
+#+LaTeX_CLASS: beamer
+#+LaTeX_CLASS_OPTIONS: [xcolor=dvipsnames,10pt]
+#+OPTIONS: H:1 num:t toc:nil \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+#+LATEX_HEADER: \input{org-babel.tex}
+
+* Selecting an Evaluation Technique
+
+There are three techniques
+#+begin_center
+Analytical Modeling, Simulation, Measurement
+#+end_center
+
+#+attr_latex: :booktabs t
+| *Criteria*            | *Analytical* | *Simulation*  | *Measurement*     |
+|                     | *Modeling*   |             |                 |
+|---------------------+------------+-------------+-----------------|
+| 1. Life-cycle stage | Any        | Any         | Postprototype   |
+| 2. Time required    | Small      | Medium      | Varies          |
+| 3. Tools            | Analysts   | Comp. Lang. | Instrumentation |
+| 4. Accuracy         | Low        | Moderate    | Varies          |
+| 5. Trade-off Eval.  | Easy       | Moderate    | Difficult       |
+| 6. Cost             | Small      | Medium      | High            |
+| 7. Saleability      | Low        | Medium      | High            |
+
+Accuracy is hard to obtain for any technique.
+
+* *Key* Consideration: Life-Cycle Stage
+
+#+attr_latex: :booktabs t
+| *Criteria*            | *Analytical* | *Simulation*  | *Measurement*     |
+|                     | *Modeling*   |             |                 |
+|---------------------+------------+-------------+-----------------|
+| 1. Life-cycle stage | Any        | Any         | Postprototype   |
+
+#+latex: \vfill
+
+*Analytical Modeling* or *Simulation*
+- More convincing if supported by previous measurements
+
+* Consideration: Time Available
+
+Time constraints strongly influence technique choice
+#+attr_latex: :booktabs t
+| *Criteria*            | *Analytical* | *Simulation*  | *Measurement*     |
+|                     | *Modeling*   |             |                 |
+|---------------------+------------+-------------+-----------------|
+| 2. Time required    | Small      | Medium      | Varies          |
+
+#+latex: \vfill
+
+- Analytical modeling
+  - Suitable when results are needed "yesterday"
+- Simulations
+  - Simulations are tipically slow  
+- Measurements
+  - Longer than analytical modeling but shorter than simulations
+  - Highly variable in duration
+    - Murphy’s law: if anything can go wrong, it will
+
+* Consideration: Availability of Tools
+
+#+attr_latex: :booktabs t
+| *Criteria*            | *Analytical* | *Simulation*  | *Measurement*     |
+|                     | *Modeling*   |             |                 |
+|---------------------+------------+-------------+-----------------|
+| 3. Tools            | Analysts   | Comp. Lang. | Instrumentation |
+
+#+latex: \vfill
+
+- Tools required
+  - Analytical modeling → modeling skills (e.g., queueing theory)
+  - Simulation → knowledge of simulation languages and techniques
+  - Measurement → instrumentation
+
+#+latex: \vfill
+
+- Analysts differ in expertise and preferences
+  - Many skilled modelers avoid real systems
+  - Others prefer measurement or simulation due to limited modeling knowledge
+  - Lack of simulation expertise often prevents its use
+#+latex: \pause
+- The necessary tools for simulation might not exist
+
+* Consideration: Accuracy
+
+#+attr_latex: :booktabs t
+| *Criteria*            | *Analytical* | *Simulation*  | *Measurement*     |
+|                     | *Modeling*   |             |                 |
+|---------------------+------------+-------------+-----------------|
+| 4. Accuracy         | Low        | Moderate    | Varies          |
+
+\to Accuracy is hard to obtain for any technique.
+
+#+latex: \vfill
+
+*Accuracy varies by technique*
+  - Analytical modeling → many assumptions, often low accuracy
+  - Simulation → more details, closer to reality
+  - Measurement → may vary from very high to zero (environment-specific)
+
+#+latex: \vfill\pause
+  
+Accuracy is different from Correctness of conclusions
+- Risk of misinterpretation of performance data
+
+* Consideration: Trade-off Evaluation (/Insights/)
+
+#+attr_latex: :booktabs t
+| *Criteria*            | *Analytical* | *Simulation*  | *Measurement*     |
+|                     | *Modeling*   |             |                 |
+|---------------------+------------+-------------+-----------------|
+| 5. Trade-off Eval.  | Easy       | Moderate    | Difficult       |
+
+#+latex: \vfill
+
+Performance study
+- Compare alternatives
+- Find optimal parameter value
+
+#+latex: \vfill\pause
+
+- Analytical models → best for understanding parameter effects
+- Simulation → can explore parameter space, but trade-offs unclear
+- Measurement → least desirable for finding optimal parameter value
+  - Results may be distorted by some random change in the environment
+
+* Consideration: Cost
+
+#+attr_latex: :booktabs t
+| *Criteria*            | *Analytical* | *Simulation*  | *Measurement*     |
+|                     | *Modeling*   |             |                 |
+|---------------------+------------+-------------+-----------------|
+| 6. Cost             | Small      | Medium      | High            |
+
+#+latex: \vfill
+
+- Analytical modeling
+  - Only analyst’s time, paper, pencil
+
+- Simulation
+  - Useful for expensive systems where configurations must be changed virtually
+
+- Measurement
+  - Requires real equipment, instruments, and significant time
+
+* Consideration: Saleability of Results
+
+#+attr_latex: :booktabs t
+| *Criteria*            | *Analytical* | *Simulation*  | *Measurement*     |
+|                     | *Modeling*   |             |                 |
+|---------------------+------------+-------------+-----------------|
+| 7. Saleability      | Low        | Medium      | High            |
+
+#+latex: \vfill
+
+- Measurements
+  - Strongest justification is credibility
+  - Easier to convince others with real data
+
+#+latex: \vfill\pause
+
+- Analytical results
+  - Often met with skepticism, as methods and results not well understood
+  - Common practice
+    - new analytical techniques \to validate using simulations or real measurements
+
+* Final Thoughts: Validating and Combining Techniques
+
+#+begin_center
+Until proven guilty, every person should be presumed innocent.
+
+Until validated, all evaluation results are _suspect_.
+#+end_center
+  
+#+latex: \pause\vfill
+
+Three rules of validation. Until validated by one of the other two techniques
+1. Do not trust the results of an analytical model
+2. Do not trust the results of a simulation model
+3. Do not trust the results of measurements (most ignore rule)
+#+latex: \pause
+
+Often useful to use two or more techniques together  
+- Simulation + Analytical Modeling
+- Measurements + Simulation
+#+latex: \pause\vfill
+
+Measurements are also prone to errors and bugs
+- Expert’s intuition often used as a validation method
+  - Results shouldn't be counterintuitive
+
+#+latex: \pause\vfill
+
+Techniques can be used sequentially  
+- Example: analytical model defines parameter ranges → simulation refines
+- Benefit: fewer simulation runs, more efficient use of resources  
+
+* References
+
+- Capítulo 3. Jain, Raj. The art of computer systems performance
+  analysis: techniques for experimental design, measurement,
+  simulation, and modeling. New York: John Wiley,
+  c1991. ISBN 0471503363.
