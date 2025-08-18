@@ -6,7 +6,7 @@
 #+EXPORT_EXCLUDE_TAGS: noexport
 #+EXPORT_SELECT_TAGS: export
 
-#+Title: Análise de Desempenho
+#+Title: Comp. Syst. Perf. Analysis
 #+SubTitle: Selection of Techniques and Metrics
 #+Author: Prof. Lucas Mello Schnorr
 #+Date: \copyleft
