@@ -1,0 +1,150 @@
+# -*- coding: utf-8 -*-
+# -*- mode: org -*-
+#+startup: beamer overview indent
+#+LANGUAGE: pt-br
+#+TAGS: noexport(n)
+#+EXPORT_EXCLUDE_TAGS: noexport
+#+EXPORT_SELECT_TAGS: export
+
+#+Title: Análise de Desempenho
+#+SubTitle: Selection of Performance Metrics
+#+Author: Prof. Lucas Mello Schnorr
+#+Date: \copyleft
+
+#+LaTeX_CLASS: beamer
+#+LaTeX_CLASS_OPTIONS: [xcolor=dvipsnames,10pt]
+#+OPTIONS: H:1 num:t toc:nil \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+#+LATEX_HEADER: \input{org-babel.tex}
+
+* Selecting Performance Metrics
+
+There are three outcomes possible
+1. The system may perform the service correctly (Done correctly)
+2. The system may perform the service incorrectly (Done incorrectly)
+3. The system may refuse to perform the service (Cannot do)
+
+#+attr_latex: :center no :width .7\linewidth
+[[./img/three-outcomes.png]]
+
+* Example of service outcomes
+
+- Network gateway:
+  - Correct: forwards packets to destination
+  - Incorrect: forwards to wrong destination
+  - Refusal: fails (down), no forwarding
+
+#+latex: \vfill\pause
+
+- Database:
+  - Correct: query answered correctly
+  - Incorrect: query answered incorrectly
+  - Refusal: no answer (system down)
+
+* Outcome: /done correctly/
+
+- Three key metrics (time–rate–resource):
+  - **Responsiveness** → time taken (e.g., response time)
+  - **Productivity** → rate achieved (e.g., throughput)
+  - **Utilization** → resources utilization (% busy)
+
+#+latex: \vfill\pause
+
+- Bottleneck: resource with highest utilization
+- Optimizing bottlenecks yields highest payoff
+
+* Outcome: /done incorrectly/
+
+When service performed incorrectly → errors
+
+#+begin_center
+Classify error types and compute probabilities
+#+end_center
+
+#+latex: \vfill\pause
+
+Example: gateway errors
+- Single-bit errors
+- Multi-bit errors
+- Partial delivery (fragments)
+
+* Outcome: /cannot do/
+
+If service not performed → system is down/unavailable
+
+#+begin_center
+Classify failure modes and compute probabilities
+#+end_center
+
+#+latex: \vfill\pause
+
+Example: gateway unavailability
+- 0.01% due to processor failure
+- 0.03% due to software failure
+
+* Summary of outcomes
+
+#+attr_latex: :center no :width .4\linewidth
+[[./img/three-outcomes.png]]
+
+- Successful service → **speed metrics**
+- Incorrect service → **reliability metrics**
+- Unavailable service → **availability metrics**
+
+#+latex: \vfill
+
+#+begin_center
+Each service may generate many metrics across these categories
+
+The number of metrics grows as each system may serve many services
+#+end_center
+
+* Consideration: variability and Averages
+
+- Mean values often sufficient, but variability matters
+  - Variability might indicate intricate competition for resources
+
+#+latex: \vfill
+  
+- Examples
+  1. High mean response time _and_ high variability of the response time
+     - Both degrades user productivity
+  2. Increase the number of threads in a machine with few cores
+     - Scheduling those threads take longer
+
+#+latex: \vfill\pause
+
+#+begin_center
+Study both mean and variability when needed
+#+end_center
+
+* Consideration: individual vs. global metrics
+
+- **Individual metrics** → utility for each user
+- **Global metrics** → systemwide utility
+- Examples:
+  - Individual: response time, throughput
+  - Global: utilization, reliability, availability
+- Trade-offs may exist:
+  - Boosting one user’s throughput can reduce another’s
+
+* Consideration: criteria for selecting metrics
+
+- **Low variability**: reduces repetitions needed for confidence
+- **Nonredundancy**: avoid metrics that give same info
+  - Example: queue length vs. waiting time
+- **Completeness**: all outcomes should be reflected in performance metrics
+
+#+latex: \vfill\pause
+
+Example (for completeness): when comparing two network protocols
+- Main performance metric: the one providing higher throughput
+- The best procolol caused more premature disconnections
+- Action: ``disconnection probability'' added as a performance metric
+      
+
+* References
+
+- Capítulo 3. Jain, Raj. The art of computer systems performance
+  analysis: techniques for experimental design, measurement,
+  simulation, and modeling. New York: John Wiley,
+  c1991. ISBN 0471503363.
