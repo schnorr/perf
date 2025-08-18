@@ -7,7 +7,7 @@
 #+EXPORT_SELECT_TAGS: export
 
 #+Title: Comp. Syst. Perf. Analysis
-#+SubTitle: Selection of Techniques and Metrics
+#+SubTitle: Selection of Techniques
 #+Author: Prof. Lucas Mello Schnorr
 #+Date: \copyleft
 
