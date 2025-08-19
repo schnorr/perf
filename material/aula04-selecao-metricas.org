@@ -98,7 +98,14 @@ Each service may generate many metrics across these categories
 The number of metrics grows as each system may serve many services
 #+end_center
 
-* Consideration: variability and Averages
+#+latex: \vfill\pause
+
+Let's delve into three significative considerations
+- variability and averages
+- individual vs global metrics
+- list of important criteria
+
+* Consideration: variability and averages
 
 - Mean values often sufficient, but variability matters
   - Variability might indicate intricate competition for resources
@@ -109,7 +116,7 @@ The number of metrics grows as each system may serve many services
   1. High mean response time _and_ high variability of the response time
      - Both degrades user productivity
   2. Increase the number of threads in a machine with few cores
-     - Scheduling those threads take longer
+     - Scheduling becomes complex, higher competition \to higher variability
 
 #+latex: \vfill\pause
 
@@ -120,19 +127,19 @@ Study both mean and variability when needed
 * Consideration: individual vs. global metrics
 
 - **Individual metrics** → utility for each user
-- **Global metrics** → systemwide utility
-- Examples:
+- **Global metrics** → system-wide utility
+- Examples
   - Individual: response time, throughput
   - Global: utilization, reliability, availability
-- Trade-offs may exist:
+- Trade-offs may exist
   - Boosting one user’s throughput can reduce another’s
 
 * Consideration: criteria for selecting metrics
 
-- **Low variability**: reduces repetitions needed for confidence
-- **Nonredundancy**: avoid metrics that give same info
+- *Low variability*: reduces repetitions needed for confidence
+- *Nonredundancy*: avoid metrics that give same info
   - Example: queue length vs. waiting time
-- **Completeness**: all outcomes should be reflected in performance metrics
+- *Completeness*: all outcomes should be reflected in performance metrics
 
 #+latex: \vfill\pause
 
@@ -141,10 +148,197 @@ Example (for completeness): when comparing two network protocols
 - The best procolol caused more premature disconnections
 - Action: ``disconnection probability'' added as a performance metric
       
+* Commonly Used Performance Metrics
+
+Let's see some examples of commonly used performance metrics
+- Nothing is written in stone, adaptations might be required
+
+#+latex: \vfill\pause
+
+** Typical technical-oriented metrics                              :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+Successful service (/Done correctly/)
+- Responsiveness (Response time, Turnaround time, Reaction time, and Stretch factor)
+- Productivity (Throughput, Capacity, Efficiency)
+- Utilization (Resource busy time, Bottleneck identification)
+
+#+latex: \pause
+
+Incorrect service (/Done incorrectly/)
+- Reliability (Error probability, Error classification, Mean Time Between Errors)
+
+#+latex: \pause  
+  
+No service (/Cannot do/)
+- Availability (Uptime, Downtime, Mean Time To Failure)
+
+** Cost-oriented metrics                                           :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+#+latex: \vfill
+
+Productivity
+- Cost/performance ratio (USD per something)
+  - Frequent in cloud-based services
+
+* Responsiveness 1/2 (Response Time)
+
+#+begin_center
+*Response time: interval between user request and system response*
+#+end_center
+
+Simplistic view of response time: instantaneous request and response
+#+attr_latex: :width .5\linewidth
+[[./img/responsetime-simple.png]]
+
+#+latex: \vfill\pause
+
+A more realistic view of response time
+#+attr_latex: :width .55\linewidth
+[[./img/responsetime-better.png]]
+
+#+latex: \vfill\pause
+
+Definition #2 is preferred if response preparation is long
+- Interactive systems: from last /interaction/ → last /updated/ received
+- Batch: the *turnaround time*: time from job submission to its completion
+  
+* Responsiveness 2/2 (Response Time)
+
+A more realistic view of response time
+#+attr_latex: :width .55\linewidth
+[[./img/responsetime-better.png]]
+
+Related measures
+- *Reaction time*: time from request submission to start of its response
+  - It might require additional instrumentation
+
+#+latex: \pause\vfill
+
+General intuition from a person's life experience
+- Response time increases as the system load increases
+  - Load is up \to response time is up
+  - Indicates that response time should not be analyzed alone
+    - Need to correlate against the system load
+
+#+latex: \pause
+
+- *Stretch factor*, computed as a ratio between
+  #+begin_center
+  the response time at given load / the response time at minimal load
+  #+end_center
+
+* Productivity 1/3 (Throughput)
+
+#+begin_center
+*Throughput: the rate at which the requests can be serviced*
+#+end_center
+
+#+latex: {\scriptsize
+Some examples: Requests/sec (interactive systems), Jobs/sec (batch
+systems), MIPS (Millions of instructions per second), MFLOPS (Millions
+of floating-point operations per second), pps or bps (packets per
+second, bits per second), TPS (transactions per second), you name it...
+#+latex: }
+
+#+latex: \pause\vspace{.3cm}
+
+System throughput increases with the system load
+- It may even decrease (catastrophe) when the load becomes overwhelming
+- Nominal capacity: max. achievable throughput under ideal conditions
+#+attr_latex: :width .7\linewidth
+[[./img/throughput-load-cut.png]]
+
+* Productivity 2/3 (Throughput)
+
+Maximum throughput may lead to *unacceptable response time*
+- This ultimately leads to two definitions
+#+attr_latex: :width .6\linewidth
+[[./img/throughput-load.png]]
+
+#+latex: \vfill\pause
+
+Knee capacity: optimal operating point (throughput vs. response-time)
+- Before the knee: response time stable, throughput rises with load
+- Beyond the knee: response time increases rapidly, throughput gain is small
+
+#+latex: \pause
+  
+Usable capacity: maximum throughput respecting a given response time
+
+
+
+* Productivity 3/3 (Throughput)
+
+We can combine Nominal and Usable capacity
+- *Efficiency* is the ratio between them
+In computer networks, TCP tipically reaches a 85% efficiency.
+
+#+latex: \vfill
+
+Let's try out using =iperf3= in a 10Gbps network.
+
+Launch a server with =iperf3 -s=, then a client with either
+#+begin_src bash
+iperf3 -l 65507 -u -b 10G -c <server_address> # UDP
+iperf3 -c <server_address> # TCP
+#+end_src
+
+#+latex: \vfill\pause
+
+Efficiency for multiprocessor systems is a whole story by itself
+- Amhdal's Law (strong scaling)
+- Fergurson's Law (weak scaling)
+
+* Resource Utilization
+** Definition
+- Utilization = fraction of time a resource is *busy doing something*
+  - Formula: Utilization = Busy Time / Total Time
+- Idle time = period during which a resource is *not used*
+
+#+latex: \pause
+
+** Considerations
+- Goal: **balance load** across resources
+  - Avoid overloading a single resource
+  - Often not fully achievable, heuristics are necessary
+- See the Scheduling Zoo https://schedulingzoo.lip6.fr/
+  - Notation subject to https://en.wikipedia.org/wiki/Optimal_job_scheduling
+
+#+latex: \pause
+
+** Types of Resources
+- Processors: busy or idle (really?) → ratio of busy/total time
+- Memory: partially used → measure *average fraction used* over interval
+
+* /Done Incorrectly/ and /Cannot do/ metrics
+** Reliability
+- Probability of errors
+- Mean Time Between Errors (MTBE)
+- Often expressed as **error-free seconds**
+
+#+latex: \pause
+
+** Availability
+- Fraction of time system is available
+- Downtime vs Uptime
+- **MTTF** = Mean Time To Failure (mean uptime)
+  - This is a better metric if uptime is smaller than service time
+- You ``feel'' high availability, but unable to get any service (a paradox)
+
+
+* Cost/Performance
+- Used in procurement studies
+- Cost includes HW, SW, installation, maintenance
+- Performance = throughput under response-time constraints
+- Example: dollars per TPS
 
 * References
 
-- Capítulo 3. Jain, Raj. The art of computer systems performance
-  analysis: techniques for experimental design, measurement,
-  simulation, and modeling. New York: John Wiley,
+- Chapter 3, Sections 3.2 up to 3.5. Jain, Raj. The art of computer
+  systems performance analysis: techniques for experimental design,
+  measurement, simulation, and modeling. New York: John Wiley,
   c1991. ISBN 0471503363.
