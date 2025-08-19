@@ -181,8 +181,8 @@ No service (/Cannot do/)
 #+latex: \vfill
 
 Productivity
-- Cost/performance ratio (USD per something)
-  - Frequent in cloud-based services
+- Cost/performance ratio (USD per something, as in procurement studies)
+  - Frequent in cloud-based services, hardware aquisition
 
 * Responsiveness 1/2 (Response Time)
 
@@ -328,17 +328,58 @@ Efficiency for multiprocessor systems is a whole story by itself
 - **MTTF** = Mean Time To Failure (mean uptime)
   - This is a better metric if uptime is smaller than service time
 - You ``feel'' high availability, but unable to get any service (a paradox)
+* Utility classification of performance metrics
 
+Higher is Better (HB)
+- Preferred metric values are *higher*
+- Example: *System throughput*
 
-* Cost/Performance
-- Used in procurement studies
-- Cost includes HW, SW, installation, maintenance
-- Performance = throughput under response-time constraints
-- Example: dollars per TPS
+#+latex: \vfill\pause
+
+Lower is Better (LB)
+- Preferred metric values are *lower*
+- Example: *Response time*
+
+#+latex: \vfill\pause
+
+Nominal is Best (NB)
+- Both *too high* and *too low* values are undesirable
+- Example: *Utilization*
+  - Too high → response times increase (bad for users)
+  - Too low → resources underused (bad for managers)
+  - Optimal range often *50–75%*
+
+#+latex: \pause
+
+#+begin_center
+This example is debatable, as utilization might be HB in some cases
+
+such as in compute-bound parallel processing
+#+end_center
+
 
 * References
 
-- Chapter 3, Sections 3.2 up to 3.5. Jain, Raj. The art of computer
+#+latex: {\small
+- Chapter 3, Sections 3.2 up to 3.4. Jain, Raj. The art of computer
   systems performance analysis: techniques for experimental design,
   measurement, simulation, and modeling. New York: John Wiley,
   c1991. ISBN 0471503363.
+- Scheduling Zoo http://schedulingzoo.lip6.fr/ is a bibliography on
+  some scheduling problems. The contributors are Peter Brucker, Sven
+  Jäger, Christoph Dürr, Sigrid Knust, Damien Prot, Rob van Stee,
+  Óscar C. Vásquez. The first version of this website was online since
+  July 2006, A serious update was made in January 2016. Since February
+  2023 the "Scheduling Zoo" project is hosted at GitHub, making it
+  easier for the scheduling community to contribute.
+  https://sites.google.com/a/usach.cl/oscar-cvasquez/scheduling-zoo?authuser=0
+- iPerf3 is a tool for active measurements of the maximum achievable
+  bandwidth on IP networks. It supports tuning of various parameters
+  related to timing, buffers and protocols (TCP, UDP, SCTP with IPv4
+  and IPv6). For each test it reports the bandwidth, loss, and other
+  parameters. This is a new implementation that shares no code with
+  the original iPerf and also is not backwards compatible. iPerf was
+  orginally developed by NLANR/DAST. iPerf3 is principally developed
+  by ESnet / Lawrence Berkeley National Laboratory. It is released
+  under a three-clause BSD license.   https://iperf.fr/
+#+latex: }
