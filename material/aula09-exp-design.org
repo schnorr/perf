@@ -1,0 +1,163 @@
+# -*- coding: utf-8 -*-
+# -*- mode: org -*-
+#+startup: beamer overview indent
+#+LANGUAGE: pt-br
+#+TAGS: noexport(n)
+#+EXPORT_EXCLUDE_TAGS: noexport
+#+EXPORT_SELECT_TAGS: export
+
+#+Title: Comp. Syst. Perf. Analysis
+#+SubTitle: Experimental Design
+#+Author: Prof. Lucas Mello Schnorr
+#+Date: \copyleft
+
+#+LaTeX_CLASS: beamer
+#+LaTeX_CLASS_OPTIONS: [xcolor=dvipsnames,10pt]
+#+OPTIONS: H:1 num:t toc:nil \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+#+LATEX_HEADER: \input{org-babel.tex}
+
+* Introduction to Experimental Design
+
+Ninety-ninety rule of project schedules:
+
+#+begin_center
+The first 90% of the task takes 10% of the time,
+
+the last 10% takes the other 90%
+#+end_center
+
+_Goal_ \to maximize **information** with minimum **experiments**
+
+#+latex: \vfill\pause
+
+Benefits:
+- Saves effort and cost
+- Separates effects of different factors
+- Determines significance vs random variation
+
+#+latex: \pause\vfill
+
+- Many possible designs → some more widely used
+  - But before, some terminology
+
+* Terminology: Response variable
+
+#+begin_center
+The outcome of an experiment
+#+end_center
+
+#+latex: \vfill
+
+Usually system performance
+- Throughput (tasks per time)
+- Response time
+
+General term used: **Response** (not limited to performance)
+
+* Terminology: factors and levels
+
+*Factors* are the parameters affecting response
+- Example: CPU type, memory size, disk drives, workload, user level
+
+#+latex: \vfill
+
+*Levels* are the values of a factor
+- CPU: 68000, Z80, 8086
+- Memory: 512 KB, 2 MB, 8 MB
+- Workload: secretarial, managerial, scientific
+- Synonym: *Treatments*
+
+* Primary and secondary factors
+
+*Primary factors*
+- Effects we want to quantify
+- Example: CPU, memory, disk drives
+
+#+latex: \vfill\pause
+
+*Secondary factors*
+- Affect performance, but not studied in detail
+- Example: user education level, workload type
+
+* Replication
+
+#+begin_center
+The repetition of experiments
+#+end_center
+
+#+latex: \vfill
+
+Example:
+- Repeat each experiment 3 times → study has 3 replications
+
+Helps in reducing random variation
+
+* Experimental Design
+
+#+begin_center
+The plan of experiments
+
+(precisely, which experiments)
+#+end_center
+
+#+latex: \vfill
+
+Usually has
+- # of experiments
+- Factor-level combinations
+- Replications
+  
+Example: workstation study
+- 3×3×4×3×3 = 324 experiments
+- 5 replications → 1620 observations
+
+* Interaction
+
+Effect of one factor depends on level of the other factor (Interaction!)
+
+Example
+- Two factors A and B, each one with two levels (A_1, A_2, B_1, B_2)
+
+#+latex: \vfill
+
+** No interaction
+***                                                                 :BMCOL:
+:PROPERTIES:
+:BEAMER_col: 0.3
+:END:
+#+attr_latex: :center no
+|    | A_1 | A_2 |
+|----+----+----|
+| B_1 |  3 |  5 |
+| B_2 |  6 |  8 |
+***                                                                 :BMCOL:
+:PROPERTIES:
+:BEAMER_col: 0.7
+:END:
+[[./img/factor-non-interaction.png]]
+
+#+latex: \pause
+
+** Interaction
+***                                                                 :BMCOL:
+:PROPERTIES:
+:BEAMER_col: 0.3
+:END:
+|    | A_1 | A_2 |
+|----+----+----|
+| B_1 |  3 |  5 |
+| B_2 |  6 |  9 |
+*** 
+:PROPERTIES:
+:BEAMER_col: 0.7
+:END:
+[[./img/factor-interaction.png]]
+
+* References
+
+#+latex: {\small
+- Chapter 16, Sections 16.1 up to 16.3. Jain, Raj. The art of computer
+  systems performance analysis: techniques for experimental design,
+  measurement, simulation, and modeling. New York: John Wiley,
+  c1991. ISBN 0471503363.
+#+latex: }
