@@ -39,6 +39,7 @@ Benefits:
 
 - Many possible designs → some more widely used
   - But before, some terminology
+  - Then the common mistakes
 
 * Terminology: Response variable
 
@@ -67,7 +68,7 @@ General term used: **Response** (not limited to performance)
 - Workload: secretarial, managerial, scientific
 - Synonym: *Treatments*
 
-* Primary and secondary factors
+* Terminology: Primary and secondary factors
 
 *Primary factors*
 - Effects we want to quantify
@@ -79,7 +80,7 @@ General term used: **Response** (not limited to performance)
 - Affect performance, but not studied in detail
 - Example: user education level, workload type
 
-* Replication
+* Terminology: Replication
 
 #+begin_center
 The repetition of experiments
@@ -92,7 +93,7 @@ Example:
 
 Helps in reducing random variation
 
-* Experimental Design
+* Terminology: Experimental Design
 
 #+begin_center
 The plan of experiments
@@ -111,7 +112,7 @@ Example: workstation study
 - 3×3×4×3×3 = 324 experiments
 - 5 replications → 1620 observations
 
-* Interaction
+* Terminology: Interaction
 
 Effect of one factor depends on level of the other factor (Interaction!)
 
@@ -153,6 +154,108 @@ Example
 :END:
 [[./img/factor-interaction.png]]
 
+* Common Mistakes in Experimentation
+
+Novice analysts may draw misleading conclusions  
+
+Errors often arise from
+- poor design or
+- lack of awareness of analysis techniques
+
+#+latex: \vfill
+
+Six common mistakes to avoid
+1. Ignore experimental error
+2. No control of important parameters
+3. No isolation of factor effects
+4. One-Factor-at-a-Time designs
+5. Ignore interactions
+6. Too many experiments
+
+* Mistake 1: Ignoring Experimental Error
+
+Every measured value is a random value
+- From the /probability/ universe
+
+#+latex: \vfill
+
+Repeated measurements differ slightly  
+- Must separate factor effects from /experimental error/
+- Inexperienced analysts wrongly assign all variation to factors  
+
+* Mistake 2: Not Controlling Important Parameters
+
+Recalling the importance of listing /all/ parameters
+#+attr_latex: :width .3\linewidth
+[[./img/list-parameters.png]]
+
+Only some parameters are varied as factors
+- Make sure you control important parameters
+
+Example: network switch maximum capacity
+- If ignored, results become meaningless  
+
+#+latex: \vfill\pause
+
+See, for instance:
+- Staci A. Smith and David K. Lowenthal. 2021. Jigsaw: A
+  High-Utilization, Interference-Free Job Scheduler for Fat-Tree
+  Clusters. In Proceedings of the 30th International Symposium on
+  High-Performance Parallel and Distributed Computing (HPDC
+  '21). Association for Computing Machinery, New York, NY, USA,
+  201–213. https://doi.org/10.1145/3431379.3460635
+
+* Mistake 3: Not Isolating Factor Effects
+
+Varying several factors at once confuses interpretation  
+- Cannot attribute performance changes to specific factors
+
+#+latex: \vfill\pause
+To avoid this, some naive analysts do
+- Use a very simple experimental design
+  1. Fix all factors except one
+  2. Measure all levels of that factor
+  3. Then move on
+- Leads to ambiguous results
+
+* Mistake 4: Adopt One-Factor-at-a-Time Designs
+
+Simple, but wasteful of resources
+- Requires too many experiments for same information
+
+Proper designs give narrower confidence intervals with fewer experiments  
+
+* Mistake 5: Ignoring Interactions
+
+- Effect of one factor may depend on level of another  
+- Example: cache size benefit depends on program size  
+- One-factor-at-a-time cannot capture interactions  
+
+* Mistake 6: Too Many Experiments
+
+Large designs with many factors and levels are inefficient
+- Example of the workstation study
+  - 3×3×4×3×3 = 324 experiments
+  - 5 replications → 1620 observations
+
+#+latex: \vfill\pause
+
+- Better: break into steps with smaller designs
+- First step: small set of factors/levels
+  - Debug process, identify insignificant factors  
+- Later steps: expand design as needed
+
+#+latex: \vfill\pause
+
+See for instance
+- Millani, L.F., Mello Schnorr, L. (2017). Computation-Aware Dynamic
+  Frequency Scaling: Parsimonious Evaluation of the Time-Energy
+  Trade-Off Using Design of Experiments. In: Desprez, F., et
+  al. Euro-Par 2016: Parallel Processing
+  Workshops. Euro-Par 2016. Lecture Notes in Computer Science(),
+  vol 10104. Springer,
+  Cham. https://doi.org/10.1007/978-3-319-58943-5_47
+
 * References
 
 #+latex: {\small
@@ -160,4 +263,17 @@ Example
   systems performance analysis: techniques for experimental design,
   measurement, simulation, and modeling. New York: John Wiley,
   c1991. ISBN 0471503363.
+- Staci A. Smith and David K. Lowenthal. 2021. Jigsaw: A
+  High-Utilization, Interference-Free Job Scheduler for Fat-Tree
+  Clusters. In Proceedings of the 30th International Symposium on
+  High-Performance Parallel and Distributed Computing (HPDC
+  '21). Association for Computing Machinery, New York, NY, USA,
+  201–213. https://doi.org/10.1145/3431379.3460635
+- Millani, L.F., Mello Schnorr, L. (2017). Computation-Aware Dynamic
+  Frequency Scaling: Parsimonious Evaluation of the Time-Energy
+  Trade-Off Using Design of Experiments. In: Desprez, F., et
+  al. Euro-Par 2016: Parallel Processing
+  Workshops. Euro-Par 2016. Lecture Notes in Computer Science(),
+  vol 10104. Springer,
+  Cham. https://doi.org/10.1007/978-3-319-58943-5_47  
 #+latex: }
