@@ -17,6 +17,247 @@
 #+LATEX_HEADER: \input{org-babel.tex}
 
 * Introduction to Measurement Techniques and Tools
+
+The performance analysis involves
+- To monitor the system while it is being subjected to an workload
+
+#+latex: \vfill\pause
+
+Necessary to understand the following topics
+- What are the different types of workloads?
+- Which workloads are commonly used by other analysts?
+- How are the appropriate workload types selected?
+- How is the measured workload data summarized?
+- How is the system performance monitored?
+- How can an workload be placed on the system in a controlled manner?
+- How are the results of the evaluation presented?
+
+* Test Workloads in Performance Studies
+
+- Used to compare computer systems  
+  - Origin: mostly for processors & operating systems  
+  - It can be generalized for DBs, networks, etc.
+
+#+latex: \vfill\pause
+
+- *Test workload*: any workload in performance studies  
+  - Real workload: observed in production, not repeatable → unsuitable  
+  - Synthetic workload: modeled after real, repeatable, controllable
+
+#+latex: \vfill\pause
+
+** An overview of our groups topic and corresponding workloads
+***                                                                 :BMCOL:
+:PROPERTIES:
+:BEAMER_col: 0.45
+:END:
+
+| Group   | Topic         |      |
+|---------+---------------+------|
+| Grupo J | PageRank      | GR   |
+| Grupo B | ResNet50      | GR   |
+| Grupo C | Fletcher      | PPGC |
+| Grupo H | PECores       | PPGC |
+| Grupo N | IOPatterns    | PPGC |
+| Grupo F | JuliaVsPython | GR   |
+| Grupo D | GZ            | GR   |
+| Grupo A | DM-Julia      | GR   |
+|---------+---------------+------|
+
+***                                                                  :BMCOL:
+:PROPERTIES:
+:BEAMER_col: 0.45
+:END:
+
+| Group   | Topic       |      |
+|---------+-------------+------|
+| Grupo O | UCX-OpenMPI | PPGC |
+| Grupo L | PCADPower   | PPGC |
+| Grupo I | Archpelagus | PPGC |
+| Grupo P | KGE-Runtime | PPGC |
+| Grupo E | VPN         | GR   |
+| Grupo K | CNN-Many    | GR   |
+| Grupo M | SimAnalysis | PPGC |
+|         |             |      |
+|---------+-------------+------|
+
+* Why Synthetic Workloads?
+
+- Represent real workloads without sensitive/large data  
+- Easy to modify and port across systems  
+- Can include built-in measurement tools
+
+#+latex: \vfill\pause
+
+Types of test workloads:  
+  1. Addition instruction
+     - No longer used in general, but similar to today's /Floating Point Operations/
+  2. Instruction mixes
+     - Gibson Instrucition Mix
+  4. Kernels  
+  5. Synthetic programs  
+  6. Application benchmarks  
+
+* 2. Instruction Mixes and the Gibson Mix
+
+- Addition instruction became insufficient → need for detailed workloads  
+- *Instruction Mix*: set of instructions + usage frequencies  
+  - Allows computing average instruction time for processor comparison
+
+#+latex: \vfill
+
+- Gibson Mix (1959, IBM 704/650)
+  - 13 instruction classes (Load/Store, Branches, Floating Ops, etc.)  
+  - Weighted average based on measured usage frequencies
+
+#+latex: {\tiny
+| Class | Instruction Type                 | Frequency (%) |
+|-------+----------------------------------+---------------|
+|     1 | Load and Store                   |          31.2 |
+|     2 | Fixed-Point Add/Subtract         |           6.1 |
+|     3 | Compares                         |           3.8 |
+|     4 | Branches                         |          16.6 |
+|     5 | Floating Add/Subtract            |           6.9 |
+|     6 | Floating Multiply                |           3.8 |
+|     7 | Floating Divide                  |           1.5 |
+|     8 | Fixed-Point Multiply             |           0.6 |
+|     9 | Fixed-Point Divide               |           0.2 |
+|    10 | Shifting                         |           4.4 |
+|    11 | Logical (AND, OR)                |           1.6 |
+|    12 | Instructions not using registers |           5.3 |
+|    13 | Indexing                         |          18.0 |
+|-------+----------------------------------+---------------|
+#+latex: }
+
+#+latex: \vfill\pause
+
+Limitations
+- Modern CPUs → more complex instructions, caches, pipelines, addressing  
+- Instruction times vary with data patterns & hardware conditions  
+- Only reflects CPU speed, not total system performance  
+Still useful: gives one number (MIPS / MFLOPS) for relative CPU comparison  
+
+* 3. Kernels as Performance Workloads
+Motivation
+- Pipelining, caches, address translation \to /instruction times highly variable/ @@latex:\linebreak@@
+  Transl. Lookaside Buf. (TLB) _hit_ /versus/ TLB _miss_ \to pg walk \to pg fault
+- Evaluating individual instructions was no longer representative
+
+#+latex: \vfill\pause
+
+** Kernel                                                          :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+- Set of instructions representing a frequent function/service.
+- Examples: Matrix Multiplication, Tree Searching, Matrix Inversion, Sorting
+
+**                                                         :B_ignoreheading:
+:PROPERTIES:
+:BEAMER_env: ignoreheading
+:END:
+
+#+latex: \vfill\pause
+
+Advantages
+- Capture common operations from real applications
+- Less affected by low-level parameters (e.g., frequency of zeros, branches) @@latex: \pause@@
+Limitations
+- Often not based on real system measurements
+- Typically ignore I/O → kernel perf. does not reflect total syst. perf.
+
+* 4. Synthetic Programs (Exerciser Loops)
+Motivation
+- Processing kernels ignored OS services and I/O devices
+- Real workloads involve significant I/O
+
+#+latex: \vfill\pause
+
+** Synthetic Programs                                              :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+- Simple loops making repeated service calls or I/O requests
+- Control parameters adjust the number of requests
+- Example: =stress-ng=
+
+**                                                         :B_ignoreheading:
+:PROPERTIES:
+:BEAMER_env: ignoreheading
+:END:
+
+#+latex: \vfill\pause
+
+Advantages
+- Quick to develop and portable across systems
+
+Disadvantages
+- Too small; not representative of real memory/disk references
+- Page faults, disk caches, and CPU-I/O overlap not well captured
+- Unsuitable for multiuser environments (synchronization artifacts)
+
+* 5. Application Benchmarks
+** Benchmarking                                                    :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+Comparing performance of two or more systems through measurements
+
+#+latex: \pause
+
+** Benchmarks                                                      :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+- Workloads used in benchmarking
+- Can include kernels, synthetic programs, and application-level workloads
+- Sometimes restricted to programs taken from real workloads @@latex: \linebreak@@
+  https://www.spec.org/ @@latex: \linebreak@@ \to Products \to CPU \to SPEC CPU 2017 \to Benchmarks
+  
+#+latex: \pause
+  
+** Application Benchmarks                                         :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+- Represent a subset of real application functions (e.g., airline reservations)
+  - Use almost all system resources: CPU, I/O, networks, databases
+
+* One example: The LINPACK Benchmark
+
+#+begin_center
+https://top500.org/project/linpack/
+
+http://www.netlib.org/benchmark/hpl/
+#+end_center
+
+Developed by Jack Dongarra (1983), Innovative Computing Laboratory
+
+#+latex: \smallskip
+
+Features: Two-dimensional block-cyclic data distribution;
+Right-looking variant of the LU factorization with row partial
+pivoting featuring multiple look-ahead depths; Recursive panel
+factorization with pivot search and column broadcast combined; Various
+virtual panel broadcast topologies; bandwidth reducing swap-broadcast
+algorithm; backward substitution with look-ahead of depth 1.
+
+**                                                                   :BMCOL:
+:PROPERTIES:
+:BEAMER_col: 0.3
+:END:
+
+#+attr_latex: :width .8\linewidth
+[[./img/linpack.jpg]]
+
+
+**                                                                   :BMCOL:
+:PROPERTIES:
+:BEAMER_col: 0.7
+:END:
+#+attr_latex: :width .8\linewidth
+[[./img/linpack-scalability.png]]
+
 * References
 
 #+latex: {\small
