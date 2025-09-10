@@ -223,7 +223,7 @@ Comparing performance of two or more systems through measurements
 - Represent a subset of real application functions (e.g., airline reservations)
   - Use almost all system resources: CPU, I/O, networks, databases
 
-* One example: The LINPACK Benchmark
+* 1st example: The LINPACK Benchmark
 
 #+begin_center
 https://top500.org/project/linpack/
@@ -258,6 +258,28 @@ algorithm; backward substitution with look-ahead of depth 1.
 #+attr_latex: :width .8\linewidth
 [[./img/linpack-scalability.png]]
 
+* 2nd example: SPEC CPU2017 Benchmark Suite
+
+Evaluates compute-intensive performance of processors, memory, compilers.
+
+#+latex: \vfill\pause
+
+43 Benchmarks: Divided into four sub-suites.
+- SPECspeed 2017 Integer
+- SPECspeed 2017 Floating Point
+- SPECrate 2017 Integer
+- SPECrate 2017 Floating Point
+- Languages: C99, Fortran-2003, C++2003.
+- Metrics: Performance measured in SPECspeed and SPECrate.
+
+Key Features
+- Real-World Applications: Benchmarks derived from actual user applications
+- Portability: Designed to run across a broad range of systems
+- Energy Measurement: Optional metric for measuring energy consumption
+
+#+latex: \vfill\pause
+/But you need to pay..../
+
 * References
 
 #+latex: {\small
@@ -266,4 +288,6 @@ algorithm; backward substitution with look-ahead of depth 1.
   of computer systems performance analysis: techniques for
   experimental design, measurement, simulation, and modeling. New
   York: John Wiley, c1991. ISBN 0471503363.
+- Scalability study: https://algowiki-project.org/en/Linpack,_HPL
+- Linpack User's Guide: https://a.co/d/2xpLh4q
 #+latex: }
