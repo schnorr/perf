@@ -46,12 +46,13 @@ Necessary to understand the following topics
 
 #+latex: \vfill\pause
 
-** An overview of our groups topic and corresponding workloads
+** An overview of our groups topic, what are the workloads?
 ***                                                                 :BMCOL:
 :PROPERTIES:
 :BEAMER_col: 0.45
 :END:
 
+#+latex: {\scriptsize
 | Group   | Topic         |      |
 |---------+---------------+------|
 | Grupo J | PageRank      | GR   |
@@ -63,12 +64,14 @@ Necessary to understand the following topics
 | Grupo D | GZ            | GR   |
 | Grupo A | DM-Julia      | GR   |
 |---------+---------------+------|
+#+latex: }
 
 ***                                                                  :BMCOL:
 :PROPERTIES:
 :BEAMER_col: 0.45
 :END:
 
+#+latex: {\scriptsize
 | Group   | Topic       |      |
 |---------+-------------+------|
 | Grupo O | UCX-OpenMPI | PPGC |
@@ -80,6 +83,7 @@ Necessary to understand the following topics
 | Grupo M | SimAnalysis | PPGC |
 |         |             |      |
 |---------+-------------+------|
+#+latex: }
 
 * Why Synthetic Workloads?
 
@@ -216,7 +220,7 @@ Comparing performance of two or more systems through measurements
   
 #+latex: \pause
   
-** Application Benchmarks                                         :B_block:
+** Application Benchmarks                                          :B_block:
 :PROPERTIES:
 :BEAMER_env: block
 :END:
@@ -307,6 +311,426 @@ Examples
 - Database system comparison: transactions as workload.
 - Multiple services: workload should exercise all services
 
+* Workload Characterization Techniques
+
+#+begin_center
+Motivation
+
+a real-user environment is generally not repeatable.
+#+end_center
+
+#+latex: \pause
+
+#+begin_center
+Goal
+
+Create a repeatable workload model to test
+
+multiple alternatives under identical conditions
+#+end_center
+
+#+latex: \pause\vfill
+
+*Methodological process*
+1. Observe real-user environments
+2. Identify key characteristics
+3. Develop a model for controlled, repeatable studies
+
+#+latex: \pause
+
+** An overview of our groups topic, what are the workloads?
+***                                                                 :BMCOL:
+:PROPERTIES:
+:BEAMER_col: 0.45
+:END:
+
+#+latex: {\scriptsize
+| Group   | Topic         |      |
+|---------+---------------+------|
+| Grupo J | PageRank      | GR   |
+| Grupo B | ResNet50      | GR   |
+| Grupo C | Fletcher      | PPGC |
+| Grupo H | PECores       | PPGC |
+| Grupo N | IOPatterns    | PPGC |
+| Grupo F | JuliaVsPython | GR   |
+| Grupo D | GZ            | GR   |
+| Grupo A | DM-Julia      | GR   |
+|---------+---------------+------|
+#+latex: }
+
+***                                                                  :BMCOL:
+:PROPERTIES:
+:BEAMER_col: 0.45
+:END:
+
+#+latex: {\scriptsize
+| Group   | Topic       |      |
+|---------+-------------+------|
+| Grupo O | UCX-OpenMPI | PPGC |
+| Grupo L | PCADPower   | PPGC |
+| Grupo I | Archpelagus | PPGC |
+| Grupo P | KGE-Runtime | PPGC |
+| Grupo E | VPN         | GR   |
+| Grupo K | CNN-Many    | GR   |
+| Grupo M | SimAnalysis | PPGC |
+|         |             |      |
+|---------+-------------+------|
+#+latex: }
+
+* Workload Components
+
+#+begin_center
+Consists of services requested or resource demands
+
+by users on the observed system
+#+end_center
+
+#+latex: \vfill\pause
+  
+User Definition
+- Entity making service requests at the observed system interface
+- May be human or non-human (e.g., programs, batch jobs)
+  - Today, tipically non-human, but still (games, etc)
+
+Examples of _Workload Components_
+1. Applications: different types of applications / jobs
+2. Sites: origin of requests, different locations of an organization
+3. User Sessions: from login to logout, used applications
+
+#+latex: \pause
+
+** An overview of our groups topic, what are the workloads?
+***                                                                 :BMCOL:
+:PROPERTIES:
+:BEAMER_col: 0.45
+:END:
+
+#+latex: {\scriptsize
+| Group   | Topic         |      |
+|---------+---------------+------|
+| Grupo J | PageRank      | GR   |
+| Grupo B | ResNet50      | GR   |
+| Grupo C | Fletcher      | PPGC |
+| Grupo H | PECores       | PPGC |
+| Grupo N | IOPatterns    | PPGC |
+| Grupo F | JuliaVsPython | GR   |
+| Grupo D | GZ            | GR   |
+| Grupo A | DM-Julia      | GR   |
+|---------+---------------+------|
+#+latex: }
+
+***                                                                  :BMCOL:
+:PROPERTIES:
+:BEAMER_col: 0.45
+:END:
+
+#+latex: {\scriptsize
+| Group   | Topic       |      |
+|---------+-------------+------|
+| Grupo O | UCX-OpenMPI | PPGC |
+| Grupo L | PCADPower   | PPGC |
+| Grupo I | Archpelagus | PPGC |
+| Grupo P | KGE-Runtime | PPGC |
+| Grupo E | VPN         | GR   |
+| Grupo K | CNN-Many    | GR   |
+| Grupo M | SimAnalysis | PPGC |
+|         |             |      |
+|---------+-------------+------|
+#+latex: }
+
+
+* Key Considerations for Workload Component Selection
+
+1. Workload components must face the system interface
+2. Each component should represent as homogeneous a group as possible
+   - Do not mix different groups
+3. Define the /workload parameters/
+   - Measured quantities, service requests, or resource demands
+   - Examples: transaction types, instructions, packet sizes, etc
+4. Preferable to use those parameters that depend on the workload
+   - Choice: +elapsed time (response time)+, choose \to number of service requests
+   - Choice: +CPU processing time+, choose \to the size of the message
+5. Select workload characteristics with a significant impact on syst. perf.
+
+* Techniques for workload characterization
+
+1. Averaging
+2. Specifying dispersion
+3. Single-parameter histograms
+4. Multiparameter histograms
+5. Principal-component analysis
+6. Markov models
+7. Clustering
+
+* 1. Averaging
+
+#+begin_center
+a single number that summarizes the parameter values observed
+#+end_center
+
+#+latex: \vfill
+
+#+begin_export latex
+\[
+\bar{x} = \frac{1}{n} \sum_{i=1}^{n} x_i
+\]
+#+end_export
+
+#+latex: \vfill\pause
+
+** Alternatives to Arithmetic Mean                                 :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+- Mean may be inappropriate in some cases
+- Use median, mode, geometric mean, or harmonic mean instead
+- Mode is best for categorical parameters
+  - Example: most frequent packet destination (A, B, C)
+  - If frequencies are similar, consider top-2, top-3, or top-n values
+- Details and conditions discussed in Jain/Chapter 12 (we shall see)
+
+* 2. Specifying dispersion 1/2
+
+#+begin_center
+Average hides a lot of information when variability is at play
+
+So variability is commonly specified by the variance
+#+end_center
+
+#+begin_export latex
+\[
+s^2 = \frac{1}{n-1} \sum_{i=1}^{n} (x_i - \bar{x})^2
+\]
+#+end_export
+
+Standard deviation (s) might be more meaningful
+- Expressed in the same units as the mean
+
+Alternatives
+- Range (minimum and maximum)
+- 10th and 90th percentiles
+- Semi-interquartile range
+- Mean absolute deviation
+- See Section 12.8 for details and appropriate use cases
+
+* 2. Specifying dispersion 2/2
+
+** Left                                                              :BMCOL:
+:PROPERTIES:
+:BEAMER_col: 0.7
+:END:
+#+begin_center
+The ratio of the standard deviation to the mean \\
+Coefficient Of Variation (C.O.V.)
+#+end_center
+
+** Right                                                             :BMCOL:
+:PROPERTIES:
+:BEAMER_col: 0.3
+:END:
+#+begin_export latex
+\[ COV = \left( \frac{\sigma}{\mu} \right) \times 100\% \]
+#+end_export
+
+#+latex: \pause
+
+** Workload Charact. with *many different programs*
+
+- High C.O.V.: high variance → the mean is insufficient :(
+  - Consider full histogram
+  - Group users into classes and average within similar groups
+
+#+latex: {\tiny
+| Data                    | Average      | Coefficient of Variation |
+|-------------------------+--------------+--------------------------|
+| CPU time (VAX-11/780)   | 2.19 seconds |                    40.23 |
+| Number of direct writes | 8.20         |                    53.59 |
+| Direct-write bytes      | 10.21 kbytes |                    82.41 |
+| Number of direct reads  | 22.64        |                    25.65 |
+| Direct-read bytes       | 49.70 kbytes |                    21.01 |
+#+latex: }
+
+#+latex: \pause
+
+** Workload Charact. with *the same types of programs*
+
+- Zero C.O.V.: zero variance → parameter is constant
+  - The mean is all you need (full information)
+
+#+latex: {\tiny
+| Data                    | Average      | Coefficient of Variation |
+|-------------------------+--------------+--------------------------|
+| CPU time (VAX-11/780)   | 2.57 seconds |                     3.54 |
+| Number of direct writes | 19.74        |                     4.33 |
+| Direct-write bytes      | 13.46 kbytes |                     3.87 |
+| Number of direct reads  | 37.77        |                     3.73 |
+| Direct-read bytes       | 36.93 kbytes |                     3.16 |
+#+latex: }
+
+
+* 3. Single-parameter or 4. Multiparameter histograms
+
+#+begin_center
+Show relative frequencies of parameter values
+#+end_center
+
+Method
+- Continuous parameters → divide range into buckets/cells
+- Count observations per bucket → histogram (e.g., CPU time, disk I/O).
+
+**                                                                   :BMCOL:
+:PROPERTIES:
+:BEAMER_col: 0.6
+:END:
+
+#+begin_src R :results output :session *R* :exports code :noweb yes :colnames yes
+suppressMessages(library(tidyverse))
+set.seed(0)
+tibble(value =  rnorm(1000, mean = 15, sd = 4)) |>
+  ggplot(aes(x = value)) + geom_histogram(bins = 30) -> plot
+#+end_src
+
+**                                                                   :BMCOL:
+:PROPERTIES:
+:BEAMER_col: 0.4
+:END:
+
+#+latex: \bigskip
+
+#+attr_latex: :width .2\linewidth :center no
+[[file:img/histogram.pdf]]
+
+**                                                         :B_ignoreheading:
+:PROPERTIES:
+:BEAMER_env: ignoreheading
+:END:
+
+#+latex: \bigskip
+
+Applications
+  - Generate test workload for simulation or measurement models
+  - Fit and verify probability distributions in analytical modeling
+- Limitations
+  - Single-parameter histograms ignore interactions between parameters
+  - Solution: Use *multiparameter histograms* to preserve them
+
+* 5. Principal-Component Analysis (PCA)
+
+#+begin_center
+weighted sum of their parameter values
+
+Using a_j as weight for the jth parameter x_j, the weighted sum y is
+#+end_center
+
+#+begin_export latex
+\[
+y = \sum_{j=1}^{n} a_j x_j
+\]
+#+end_export
+
+How to define weights?
+- We can use PCA \to allows to find the weights a_i’s
+
+* 6. Markov Models
+
+The Strange Math That Predicts (Almost) Anything
+
+https://www.youtube.com/watch?v=KZeIEiBrT_w
+
+#+latex: \vfill\pause
+
+#+begin_center
+Next request or system state depends only on the current state
+
+System follows a Markov model if future state depends only on present state
+
+Useful in queueing analysis and workload modeling
+#+end_center
+
+#+latex: \vfill\pause
+
+Described by a **transition matrix** giving probabilities of moving
+| From/To  | CPU | Disk | Terminal |
+|----------+-----+------+----------|
+| CPU      | 0.6 |  0.3 |      0.1 |
+| Disk     | 0.9 |    0 |      0.1 |
+| Terminal |   1 |    0 |        0 |
+Corresponding **state transition diagram** can visualize the model
+#+attr_latex: :width .3\linewidth
+[[./img/transition-diagram.png]]
+
+* 7. Clustering
+
+- Large measured workloads often contain thousands of components
+  - Goal: classify components into a few clusters of similar behavior
+
+#+attr_latex: :width .4\linewidth
+[[./img/inputfeature.png]]
+
+- Benefits
+  - Select one representative from each cluster
+  - Reduces complexity
+
+* Closure
+
+#+begin_center
+How all this apply to your own TF?
+#+end_center
+
+** An overview of our groups topic, what are the workloads?
+***                                                                 :BMCOL:
+:PROPERTIES:
+:BEAMER_col: 0.45
+:END:
+
+#+latex: {\scriptsize
+| Group   | Topic         |      |
+|---------+---------------+------|
+| Grupo J | PageRank      | GR   |
+| Grupo B | ResNet50      | GR   |
+| Grupo C | Fletcher      | PPGC |
+| Grupo H | PECores       | PPGC |
+| Grupo N | IOPatterns    | PPGC |
+| Grupo F | JuliaVsPython | GR   |
+| Grupo D | GZ            | GR   |
+| Grupo A | DM-Julia      | GR   |
+|---------+---------------+------|
+#+latex: }
+
+***                                                                  :BMCOL:
+:PROPERTIES:
+:BEAMER_col: 0.45
+:END:
+
+#+latex: {\scriptsize
+| Group   | Topic       |      |
+|---------+-------------+------|
+| Grupo O | UCX-OpenMPI | PPGC |
+| Grupo L | PCADPower   | PPGC |
+| Grupo I | Archpelagus | PPGC |
+| Grupo P | KGE-Runtime | PPGC |
+| Grupo E | VPN         | GR   |
+| Grupo K | CNN-Many    | GR   |
+| Grupo M | SimAnalysis | PPGC |
+|         |             |      |
+|---------+-------------+------|
+#+latex: }
+
+**                                                         :B_ignoreheading:
+:PROPERTIES:
+:BEAMER_env: ignoreheading
+:END:
+
+#+latex: \vfill\pause
+
+Basic requirements
+- Enable repeatable, controlled experiments
+- Represent real workloads without sensitive or large data
+
+Types of workloads
+- Synthetic Programs (exerciser loops)
+- Application Benchmarks (real application subsets)
+
 * References
 
 #+latex: {\small
@@ -317,4 +741,6 @@ Examples
   York: John Wiley, c1991. ISBN 0471503363.
 - Scalability study: https://algowiki-project.org/en/Linpack,_HPL
 - Linpack User's Guide: https://a.co/d/2xpLh4q
+- Clustering Performance Evaluation in Scikit Learn
+  https://www.geeksforgeeks.org/machine-learning/clustering-performance-evaluation-in-scikit-learn/
 #+latex: }
