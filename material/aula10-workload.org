@@ -1,0 +1,28 @@
+# -*- coding: utf-8 -*-
+# -*- mode: org -*-
+#+startup: beamer overview indent
+#+LANGUAGE: pt-br
+#+TAGS: noexport(n)
+#+EXPORT_EXCLUDE_TAGS: noexport
+#+EXPORT_SELECT_TAGS: export
+
+#+Title: Comp. Syst. Perf. Analysis
+#+SubTitle: Workloads
+#+Author: Prof. Lucas Mello Schnorr
+#+Date: \copyleft
+
+#+LaTeX_CLASS: beamer
+#+LaTeX_CLASS_OPTIONS: [xcolor=dvipsnames,10pt]
+#+OPTIONS: H:1 num:t toc:nil \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+#+LATEX_HEADER: \input{org-babel.tex}
+
+* Introduction to Measurement Techniques and Tools
+* References
+
+#+latex: {\small
+- Chapter 4 (Sections 4.1 to 4.6); Chapter 5 (Sections 5.1 to 5.5);
+  Chapter 6 (Sections 6.1 to introduction of 6.8). Jain, Raj. The art
+  of computer systems performance analysis: techniques for
+  experimental design, measurement, simulation, and modeling. New
+  York: John Wiley, c1991. ISBN 0471503363.
+#+latex: }
