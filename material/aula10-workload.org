@@ -280,6 +280,33 @@ Key Features
 #+latex: \vfill\pause
 /But you need to pay..../
 
+* ``The Art of Workload Selection''
+
+#+begin_center
+The workload is crucial for performance evaluation.
+
+Improper selection can lead to misleading conclusions.
+
+@@latex: \bigskip@@
+
+System Under Test /versus/ Component Under Study
+#+end_center
+
+#+latex: \vfill\pause
+
+Major Considerations
+1. Services Exercised: workload stress all key services, not just a component
+2. Level of Detail: Choose a level of abstraction appropriate to the system
+3. Representativeness: Reflect real-world usage patterns
+4. Timeliness: Use recent and relevant workloads
+
+#+latex: \vfill\pause
+
+Examples
+- CPU comparison: compute-bound instructions as workload.
+- Database system comparison: transactions as workload.
+- Multiple services: workload should exercise all services
+
 * References
 
 #+latex: {\small
