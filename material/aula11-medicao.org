@@ -216,7 +216,127 @@ A debatable comparison table
 |--------------------+-------------------------+------------------------------|
 | Cost               | High                    | Medium                       |
 |--------------------+-------------------------+------------------------------|
-  
+
+
+* Distributed-System Monitors
+
+- Nowadays, most computing environments are distributed  
+  + Many hardware and software components  
+  + Working separately and concurrently  
+
+- Monitoring becomes more complex than in centralized systems  
+  + The monitor itself must also be distributed  
+  + Several components, running concurrently  
+
+- Design issues and terminology apply to:  
+  + Networks (case study)  
+  + Multicomputer systems  
+  + Distributed databases  
+  + Even non-distributed systems in some aspects
+
+
+** Key point: monitoring a distributed environment requires        :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+  coordination, concurrency, distributed observation, and clock synchronization
+
+
+* Layered View of a Distributed-System Monitor
+
+- Observation :: Raw data gathering on each component (local observers)  
+- Collection :: Collects data from multiple observers  
+- Analysis :: Statistical routines, event summarization  
+- Presentation :: Reports, displays, alarms for users  
+- Interpretation :: Human/expert system applies rules & trend analysis  
+- Console :: Interface for control + observation  
+- Management :: Decides & changes parameters/configurations
+
+#+latex: \vfill\pause
+
+#+attr_latex: :width .4\linewidth
+[[./img/distr-syst-layered-obs.png]]
+
+* Observation \to Raw Data Gathering
+
+Focused on gathering raw data from system components
+
+Three main observation mechanisms
+- Implicit Spying  
+  - Promiscuous observation of system bus or network  
+  - Minimal impact on performance  
+  - Often combined with filters (Boolean, arithmetic, set membership)  
+#+latex: \pause
+
+- Explicit Instrumenting  
+  - Adding trace points, probe points, hooks, or counters  
+  - Causes some overhead  
+  - Standardized data naming helps device-independent reporting  
+
+#+latex: \pause
+
+- Probing  
+  - Sends "feeler" requests to sense current performance  
+  - Example: looped-back network packets to measure queueing and load  
+  - Useful for diagnostics and reliability analysis
+
+** Key point                                                       :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+Usually, a combination of the three mechanisms is used to cover all observable activities
+
+* Collection \to Data Gathering Layer
+
+Collector: repository for data from multiple observers
+
+Observers vs. Collectors
+- Observation has higher overhead than collection
+- Separating layers reduces monitoring impact
+
+#+latex: \pause
+
+Communication models:
+- **Advertising:** observers broadcast data for all collectors
+- **Soliciting:** collectors query each observer individually
+  - Queries can be periodic or event-driven
+
+#+latex: \pause
+
+Hierarchical collectors
+  - Large systems: subnetwork collectors aggregate data from local observers
+
+#+latex: \pause    
+ 
+Clock synchronization
+- Timestamps must be comparable across observers
+- Maximum skew affects aggregation intervals
+- Causality of events _must be respected_
+  - Independent collection \to Harder post-processing of events
+
+#+latex: \pause
+
+Collectors may store past data → buffer and sampling issues apply
+
+* Analysis \to Processing Collected Data
+
+Analyzer: performs more sophisticated data processing
+
+Criteria to decide where a function belongs:
+1. Frequency: high-frequency operations → observer; infrequent → analyzer
+2. Data required: functions needing global data → analyzer
+3. Complexity: complex computations → analyzer
+4. Number of instances: many observers vs. fewer analyzers → push complexity to analyzer
+
+#+latex: \vfill\pause
+
+Examples:
+- Time stamping, counting → observer
+- Means, variances, identifying links with highest errors → analyzer
+- Goal: simplify as much as possible the observers
+  - Move complexity to infrequent analysis
+
+* Examples
 * References
 
 #+latex: {\small
