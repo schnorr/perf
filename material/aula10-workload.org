@@ -438,7 +438,6 @@ Examples of _Workload Components_
 |---------+-------------+------|
 #+latex: }
 
-
 * Key Considerations for Workload Component Selection
 
 1. Workload components must face the system interface
@@ -566,7 +565,6 @@ Coefficient Of Variation (C.O.V.)
 | Number of direct reads  | 37.77        |                     3.73 |
 | Direct-read bytes       | 36.93 kbytes |                     3.16 |
 #+latex: }
-
 
 * 3. Single-parameter or 4. Multiparameter histograms
 
