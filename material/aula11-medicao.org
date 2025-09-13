@@ -284,7 +284,7 @@ Three main observation mechanisms
 :PROPERTIES:
 :BEAMER_env: block
 :END:
-Usually, a combination of the three mechanisms is used to cover all observable activities
+A combination of the three mechanisms is used to cover all observable activities
 
 * Collection \to Data Gathering Layer
 
@@ -336,7 +336,53 @@ Examples:
 - Goal: simplify as much as possible the observers
   - Move complexity to infrequent analysis
 
-* Examples
+* Discussion
+** Groups topics. What are the measurement techniques?
+***                                                                 :BMCOL:
+:PROPERTIES:
+:BEAMER_col: 0.45
+:END:
+
+#+latex: {\scriptsize
+| Group   | Topic         |      |
+|---------+---------------+------|
+| Grupo J | PageRank      | GR   |
+| Grupo B | ResNet50      | GR   |
+| Grupo C | Fletcher      | PPGC |
+| Grupo H | PECores       | PPGC |
+| Grupo N | IOPatterns    | PPGC |
+| Grupo F | JuliaVsPython | GR   |
+| Grupo D | GZ            | GR   |
+| Grupo A | DM-Julia      | GR   |
+|---------+---------------+------|
+#+latex: }
+
+***                                                                  :BMCOL:
+:PROPERTIES:
+:BEAMER_col: 0.45
+:END:
+
+#+latex: {\scriptsize
+| Group   | Topic       |      |
+|---------+-------------+------|
+| Grupo O | UCX-OpenMPI | PPGC |
+| Grupo L | PCADPower   | PPGC |
+| Grupo I | Archpelagus | PPGC |
+| Grupo P | KGE-Runtime | PPGC |
+| Grupo E | VPN         | GR   |
+| Grupo K | CNN-Many    | GR   |
+| Grupo M | SimAnalysis | PPGC |
+|         |             |      |
+|---------+-------------+------|
+#+latex: }
+
+** Questions
+
+- List the type of monitor that can and cannot be used
+- Describe how you would implement a monitor
+- Make a list of quantities, if any, that you could measure
+  - Your target: being capable to compute your performance metrics
+
 * References
 
 #+latex: {\small
