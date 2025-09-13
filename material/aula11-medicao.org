@@ -1,0 +1,26 @@
+# -*- coding: utf-8 -*-
+# -*- mode: org -*-
+#+startup: beamer overview indent
+#+LANGUAGE: pt-br
+#+TAGS: noexport(n)
+#+EXPORT_EXCLUDE_TAGS: noexport
+#+EXPORT_SELECT_TAGS: export
+
+#+Title: Comp. Syst. Perf. Analysis
+#+SubTitle: Medição
+#+Author: Prof. Lucas Mello Schnorr
+#+Date: \copyleft
+
+#+LaTeX_CLASS: beamer
+#+LaTeX_CLASS_OPTIONS: [xcolor=dvipsnames,10pt]
+#+OPTIONS: H:1 num:t toc:nil \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+#+LATEX_HEADER: \input{org-babel.tex}
+
+* References
+
+#+latex: {\small
+- Chapter 7. Jain, Raj. The art of computer systems performance
+  analysis: techniques for experimental design, measurement,
+  simulation, and modeling. New York: John Wiley,
+  c1991. ISBN 0471503363.
+#+latex: }
