@@ -7,7 +7,7 @@
 #+EXPORT_SELECT_TAGS: export
 
 #+Title: Comp. Syst. Perf. Analysis
-#+SubTitle: Medição
+#+SubTitle: Measurement
 #+Author: Prof. Lucas Mello Schnorr
 #+Date: \copyleft
 
@@ -16,6 +16,207 @@
 #+OPTIONS: H:1 num:t toc:nil \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
 #+LATEX_HEADER: \input{org-babel.tex}
 
+* Introduction to Monitoring (Measurement)
+
+- Monitors are tools to observe system activities
+  - Collect statistics, analyze data, display results
+  - Some can identify problems and suggest fixes
+
+#+latex: \vfill\pause
+
+Who uses monitors and why?
+- *System programmer*: optimize frequently used software segments
+- *System manager*: measure res. utilization, detect bottlenecks, tune system
+- *System analyst*: characterize workloads, plan capacity, create test workloads
+- *Modeling tasks*: find parameters, validate, and develop model inputs
+
+#+latex: \vfill\pause
+
+
+** Key Point                                                       :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+
+Monitoring is the **first and essential step** in performance
+measurement
+
+* Monitor-Related Terms
+
+- Event: change in system state  
+  - e.g., context switch, disk seek start, packet arrival  
+
+#+latex: \pause\vfill
+
+- Trace: log of events  
+  - includes time, type, and relevant parameters  
+
+#+latex: \pause\vfill
+
+- Overhead: resource consumption by monitoring  
+  - e.g., CPU/storage use for data collection  
+  - goal: keep it minimal (*sometimes called artifact*)  
+
+#+latex: \pause\vfill
+
+- Domain: set of observable activities  
+  - e.g., CPU time, I/O counts, user session duration  
+
+#+latex: \pause\vfill
+
+- Input Rate: maximum frequency of observable events  
+  - *burst mode*: short high rate  
+  - *sustained*: long-term rate  
+
+#+latex: \pause\vfill
+
+- Resolution: granularity of observation  
+  - e.g., time units (16 ms), histogram bucket size  
+
+#+latex: \pause\vfill
+
+- Input Width: bits recorded per event  
+  - with input rate → determines storage needs
+
+* Monitor Classification
+
+- By implementation level  
+  - Software, Hardware, Firmware, or Hybrid (most common)  
+
+#+latex: \pause\vfill
+
+- By trigger mechanism  
+  - Event-driven: activated on specific events  
+    - low overhead if events rare, high if frequent
+    - Methods: 1/ counting /vs/ 2/ timing /vs/ 3/ tracing (or logging)
+
+  - Timer-driven (sampling): periodic activation  
+    - good for frequent events, resolution depends on sampling freq.
+    - Methods: sampling
+
+#+latex: \pause\vfill
+
+- By result display  
+  - On-line: shows state continuously or at intervals  
+  - Batch: collects data for later analysis  
+
+#+latex: \pause\vfill
+
+** Combined classification                                         :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+  - e.g., *hybrid–sampling–batch monitor*  
+
+* Software Monitors
+
+- Monitor operating systems, networks, databases  
+- Each activation executes many instructions → suitable for **low input rates**  
+
+#+latex: \pause\vfill
+
+- Example: 100 instr/event on 1-MIPS machine → 0.1 ms/event  
+  - To keep overhead ≤ 1%, activate every 10 ms or less  
+  - Input rate < 100 events/s  
+
+#+latex: \pause\vfill
+
+- Special case: instruction-tracing monitors  
+  - Can tolerate high overhead if execution *path* not affected
+  - Attached to simulators (the world stops while you trace)
+
+#+latex: \pause\vfill
+
+** Comparison with hardware monitors                               :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+  - Lower input rate, lower resolution, higher overhead  
+  - Higher input width & recording capacity  
+  - Easier to develop and modify  
+
+* Software Monitor Design: Core Issues
+
+- Activation mechanisms  
+  - Trap instruction → similar to subroutine call  
+  - Trace mode → interrupts after each instruction, high overhead  
+  - Timer interrupt → sampling, efficient for frequent events  
+
+#+latex: \pause\vfill
+
+- Buffer management  
+  - Size trade-off: too small → frequent writes, too large → memory impact  
+  - Multiple buffers (ring organization) enable continuous operation  
+  - Buffer overflow → choice between losing old vs. new data  
+  - Counter overflows should also be recorded
+
+* Software Monitor Design: Practical Considerations
+
+- Data compression/analysis  
+  - Reduces storage needs, but increases overhead  
+
+#+latex: \pause\vfill
+
+- On/Off control  
+  - Conditional activation (IF … THEN …)  
+  - Important for debugging & reducing overhead  
+
+#+latex: \pause\vfill
+
+- Implementation details \to _depends a lot on the monitored comp. object_
+  - Language: low-level (Assembly, C)
+  - Priority: low to avoid interference, high if timely logging is critical  
+  - Abnormal events: often higher monitoring priority than normal events
+
+* Hardware Monitors
+
+- External probes and counters @@latex:\linebreak@@
+  → No system resources consumed → very low overhead @@latex:\linebreak@@
+  → Higher input rate & reduced risk of bugs  
+- Built-in in the HW design
+  - Gigantic choice, all depending on HW specifics
+  
+#+latex: \pause\vfill
+
+- Key elements: probes, _counters_, logic, comparators, timers, storage
+
+#+latex: \pause\vfill
+
+** Example: **PAPI hardware counters**  
+  - Homogeneous set of normalized counters
+    - Mapped to different HW counters depending on processor
+  - Designed to evaluate processor performance  
+    - Measure events: cache misses, branch mispredictions, FLOPs, cycles  
+  - Useful for monitoring computational programs   @@latex:    \pause\vfill@@
+
+Attention
+  - May have a enourmous variability across runs and architectures  
+  - Guide performance tuning and bottleneck identification  
+
+
+* Hardware vs Software Monitors
+
+A debatable comparison table
+
+#+ATTR_LATEX: :center no :booktabs true
+|--------------------+-------------------------+------------------------------|
+| *Criteria*           | *Hardware Monitor*        | *Software Monitor*             |
+|--------------------+-------------------------+------------------------------|
+| Input rate         | 10^5 per second possible | Limited monitoring overhead  |
+|--------------------+-------------------------+------------------------------|
+| Time resolution    | 10 nanoseconds possible | Generally 10–16 milliseconds |
+|--------------------+-------------------------+------------------------------|
+| Recording capacity | Not an issue in general | Limited by overhead desired  |
+|--------------------+-------------------------+------------------------------|
+| Input width        | Simultaneous events     | Cannot                       |
+|                    |                         | (unless multiple processors) |
+|--------------------+-------------------------+------------------------------|
+| Overhead           | None                    | Overhead depends a lot       |
+|                    |                         | (5% adequate, 100% possible) |
+|--------------------+-------------------------+------------------------------|
+| Cost               | High                    | Medium                       |
+|--------------------+-------------------------+------------------------------|
+  
 * References
 
 #+latex: {\small
@@ -23,4 +224,8 @@
   analysis: techniques for experimental design, measurement,
   simulation, and modeling. New York: John Wiley,
   c1991. ISBN 0471503363.
+- March, 20th, 2014: Análise de Desempenho de Programas
+  Paralelos. Lucas Mello Schnorr. Short course (3 hours) prepared for
+  the ERAD/RS 2014. Alegrete, RS, Brazil. Both slides and text in
+  Portuguese.
 #+latex: }
