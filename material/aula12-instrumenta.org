@@ -1,0 +1,77 @@
+# -*- coding: utf-8 -*-
+# -*- mode: org -*-
+#+startup: beamer overview indent
+#+LANGUAGE: pt-br
+#+TAGS: noexport(n)
+#+EXPORT_EXCLUDE_TAGS: noexport
+#+EXPORT_SELECT_TAGS: export
+
+#+Title: Comp. Syst. Perf. Analysis
+#+SubTitle: Program Execution Monitor
+#+Author: Prof. Lucas Mello Schnorr
+#+Date: \copyleft
+
+#+LaTeX_CLASS: beamer
+#+LaTeX_CLASS_OPTIONS: [xcolor=dvipsnames,10pt]
+#+OPTIONS: H:1 num:t toc:nil \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+#+LATEX_HEADER: \input{org-babel.tex}
+
+* Discussion
+** Groups topics. What are the measurement techniques?
+***                                                                 :BMCOL:
+:PROPERTIES:
+:BEAMER_col: 0.45
+:END:
+
+#+latex: {\scriptsize
+| Group   | Topic         |      |
+|---------+---------------+------|
+| Grupo J | PageRank      | GR   |
+| Grupo B | ResNet50      | GR   |
+| Grupo C | Fletcher      | PPGC |
+| Grupo H | PECores       | PPGC |
+| Grupo N | IOPatterns    | PPGC |
+| Grupo F | JuliaVsPython | GR   |
+| Grupo D | GZ            | GR   |
+| Grupo A | DM-Julia      | GR   |
+|---------+---------------+------|
+#+latex: }
+
+***                                                                  :BMCOL:
+:PROPERTIES:
+:BEAMER_col: 0.45
+:END:
+
+#+latex: {\scriptsize
+| Group   | Topic       |      |
+|---------+-------------+------|
+| Grupo O | UCX-OpenMPI | PPGC |
+| Grupo L | PCADPower   | PPGC |
+| Grupo I | Archpelagus | PPGC |
+| Grupo P | KGE-Runtime | PPGC |
+| Grupo E | VPN         | GR   |
+| Grupo K | CNN-Many    | GR   |
+| Grupo M | SimAnalysis | PPGC |
+|         |             |      |
+|---------+-------------+------|
+#+latex: }
+
+** Questions
+
+*** From previous class
+
+- List the type of monitor that can and cannot be used
+- Describe how you would implement a monitor
+- Make a list of quantities, if any, that you could measure
+  - Your target: being capable to compute your performance metrics
+
+*** From today's class
+
+* References
+
+#+latex: {\small
+- Chapter 8. Jain, Raj. The art of computer systems performance
+  analysis: techniques for experimental design, measurement,
+  simulation, and modeling. New York: John Wiley,
+  c1991. ISBN 0471503363.
+#+latex: }
