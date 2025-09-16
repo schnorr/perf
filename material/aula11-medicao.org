@@ -193,7 +193,6 @@ Attention
   - May have a enourmous variability across runs and architectures  
   - Guide performance tuning and bottleneck identification  
 
-
 * Hardware vs Software Monitors
 
 A debatable comparison table
@@ -217,7 +216,6 @@ A debatable comparison table
 | Cost               | High                    | Medium                       |
 |--------------------+-------------------------+------------------------------|
 
-
 * Distributed-System Monitors
 
 - Nowadays, most computing environments are distributed  
@@ -240,7 +238,6 @@ A debatable comparison table
 :BEAMER_env: block
 :END:
   coordination, concurrency, distributed observation, and clock synchronization
-
 
 * Layered View of a Distributed-System Monitor
 
