@@ -16,6 +16,141 @@
 #+OPTIONS: H:1 num:t toc:nil \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
 #+LATEX_HEADER: \input{org-babel.tex}
 
+* Program Execution Monitors
+
+- Special software monitors for application programs  
+  - Aim: improve program performance
+
+#+latex: \vfill
+
+#+attr_latex: :width \linewidth
+[[./img/program-execution-monitor.png]]
+
+* Typical uses of program execution monitors
+
+- Typical uses to employ program execution monitors
+  - Tracing → execution path  
+  - Timing → time spent in modules/functions/regions
+  - Tuning → identify hot spots  
+  - Assertion checking → validate variable relationships  
+  - Coverage analysis → adequacy of test runs  
+
+#+latex: \vfill\pause
+
+- Accounting logs
+  - Originally for billing  
+  - Also useful to analyze resource usage
+
+#+latex: \vfill\pause
+
+- Not all applications are performance-related
+  - even if performance is the most common goal
+
+* Choosing Programs to Monitor and Improve
+
+- Selection criteria to employ a program execution monitor
+  - Time criticality → improve response of critical programs  
+  - Frequency of use → optimize programs executed often  
+  - Resource consumption → prioritize programs using:  
+    - CPU time  
+    - I/O time  
+    - Elapsed (people) time  
+
+#+latex: \vfill\pause
+
+- ``Cheaper'' computing
+  - people time often becomes the most expensive resource to optimize
+
+#+latex: \vfill\pause
+
+Issues in Designing a Program Execution Monitor
+- Measurement unit
+- Measurement technique
+- Instrumentation mechanism
+- Profile report
+
+* Issue 1/4: Measurement Unit
+Program divided into modules, subroutines, statements, or instructions
+
+#+latex: \vfill\pause
+
+- Lower-level units → more monitoring overhead
+- Instruction-level profiles: too detailed for many uses
+- High-level units (e.g., classes of object orientation) → language-dependent  
+- Mixed-language programs may be hard to monitor consistently
+* Issue 2/4: Measurement Technique
+
+Two main approaches
+- Tracing: explicit hooks (trap instructions) or processor trace mode  
+  - Processor trace mode → too much unwanted data, suited only for instruction-level monitors
+  - =strace= demonstration
+
+#+latex: \vfill
+
+- Sampling: uses system timer  
+  - CPU-time sampling → always finds program executing  
+  - Elapsed-time sampling → program may be waiting (e.g., I/O completion)
+  - =gprof= demonstration
+    
+* Issue 3/4: Instrumentation Mechanism
+
+Several alternatives for instrumentation placement
+
+- Before compilation (source code changes, either automatic or not)
+  - If automatic: source-to-source instrumentation
+  - Adds high-level procedure calls → transfer control to monitor
+
+#+latex: \vfill\pause
+
+- During compilation
+
+#+latex: \vfill\pause
+
+- After compilation (object code, before linking)
+- After compilation (object code, after linking, binary instrumentation)
+
+#+latex: \vfill\pause  
+
+- At runtime (sampling monitor in runtime environment)
+  - Lighter instrumentation process but less precise
+
+* Issue 4/4: Output (/aka/ Report)
+
+Profile
+- Frequency and time histograms
+- Summaries at multiple levels: module → procedure → statement  
+- Distinguish:  
+  - Self-time = resources used directly by procedure  
+  - Inherited time = resources used by subprocedures  
+- Many monitors allow zoom in/out to control detail
+
+#+latex: \vfill\pause
+  
+Trace
+- A chronological log of program execution events with fine-grained details
+- Typical contents of timestamped events
+  - Function calls
+  - Entry and exit of procedures
+  - System events (traps, faults, exceptions)
+  - State transitions (running → waiting → resumed) @@latex: \pause@@
+- Advantages
+  - Enables debugging and reproducing subtle bugs \to Analysis by /Trace Replay/
+  - Reveals exact execution path and timing
+- Disadvantages
+  - Generates very large volumes of data
+  - High overhead if used extensively
+
+* Next Step
+
+- Once execution monitors identify critical program behavior →  
+  - Analyst must suggest ways to improve performance  
+  - This leads into program optimization strategies
+
+#+latex: \vfill
+
+#+attr_latex: :width .8\linewidth
+[[./img/program-execution-monitor.png]]
+
 * Discussion
 ** Groups topics. What are the measurement techniques?
 ***                                                                 :BMCOL:
@@ -23,7 +158,7 @@
 :BEAMER_col: 0.45
 :END:
 
-#+latex: {\scriptsize
+#+latex: {\tiny
 | Group   | Topic         |      |
 |---------+---------------+------|
 | Grupo J | PageRank      | GR   |
@@ -42,7 +177,7 @@
 :BEAMER_col: 0.45
 :END:
 
-#+latex: {\scriptsize
+#+latex: {\tiny
 | Group   | Topic       |      |
 |---------+-------------+------|
 | Grupo O | UCX-OpenMPI | PPGC |
@@ -56,16 +191,19 @@
 |---------+-------------+------|
 #+latex: }
 
-** Questions
-
-*** From previous class
+** From previous class (Measurement)
 
 - List the type of monitor that can and cannot be used
 - Describe how you would implement a monitor
 - Make a list of quantities, if any, that you could measure
   - Your target: being capable to compute your performance metrics
 
-*** From today's class
+** From today's class (Program Execution Monitor)
+
+- Which measurement unit
+- Which measurement technique
+- Which instrumentation mechanism
+- What type of output report
 
 * References
 
