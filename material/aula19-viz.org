@@ -1,0 +1,266 @@
+# -*- coding: utf-8 -*-
+# -*- mode: org -*-
+#+startup: beamer overview indent
+#+LANGUAGE: pt-br
+#+TAGS: noexport(n)
+#+EXPORT_EXCLUDE_TAGS: noexport
+#+EXPORT_SELECT_TAGS: export
+
+#+Title: Comp. Syst. Perf. Analysis
+#+SubTitle: The art of data presentation
+#+Author: Prof. Lucas Mello Schnorr
+#+Date: \copyleft
+
+#+LaTeX_CLASS: beamer
+#+LaTeX_CLASS_OPTIONS: [xcolor=dvipsnames,10pt]
+#+OPTIONS: H:1 num:t toc:nil \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+#+LATEX_HEADER: \input{org-babel.tex}
+
+* Presenting Performance Results
+
+- Goal: communicate analysis results clearly for effective decision-making  
+- An unclear analysis is as useless as none \to clarity is the analyst’s duty  
+- Use words, pictures, and graphs wisely to simplify complex data  
+
+#+latex: \vfill\pause
+
+Why use graphical charts
+- ``A picture is worth a thousand words'' \to saves time and clarifies results  
+- Engages readers and highlights key insights quickly  
+- Summarizes, emphasizes, and reinforces conclusions  
+
+#+latex: \vfill\pause
+
+#+begin_center
+Closing keynote address, 1-hour talk, recommended by DSINABOX:
+
+Alberto Cairo - How Charts Lie: Getting Smarter About Visual Information
+
+2019 Great Lakes Business Intelligence & Big Data Summit hosted by WIT
+#+end_center
+
+#+attr_latex: :width .4\linewidth
+[[./img/alberto-cairo-misconceptions.png]]
+
+#+begin_center
+https://www.youtube.com/watch?v=Low28hx4wyk
+#+end_center
+
+* Types of Variables and Chart Selection
+
+The choice of a graphic chart depends on the *type of variable* displayed  
+
+#+latex: \vfill
+
+Qualitative (Categorical) Variables
+- Defined by mutually exclusive subclasses (states or levels)
+- Can be:
+  - Ordered: e.g., Supercomputers → Minicomputers → Microcomputers  
+  - Unordered: e.g., Workload type = Scientific, Engineering, Educational  
+
+Quantitative Variables
+- Expressed numerically  
+- Two types:
+  - Discrete: Countable values (e.g., number of processors, disk blocks)  
+  - Continuous: Uncountably infinite values (e.g., response time, weight)  
+
+#+latex: \pause\vfill
+
+Choosing the right chart
+- Line chart: relationship between two continuous variables  
+- Bar/Column chart: when the independent variable is discrete or
+  qualitative
+
+* Guidelines for Effective Graphic Charts 1/2
+Require Minimum Effort from the Reader
+- The best chart is the one that’s easiest to read and understand
+- Prefer direct labeling over legend boxes — reduces reader effort
+- Directly label columns or curves rather than using a separate legend
+
+#+latex: \vfill\pause
+
+Maximize Information
+- Make each graph self-explanatory.
+- Prefer words over symbols \to less cognitive load
+- Include full, informative axis labels and units  @@latex:\linebreak@@
+  (e.g., “CPU time in seconds” instead of “CPU time”)
+- Provide enough context to enable understanding without reading extra text
+
+#+attr_latex: :width .6\linewidth
+[[./img/direct-labels.png]]
+
+* Guidelines for Effective Graphic Charts 2/2
+
+Minimize Ink
+- Strive for a high information-to-ink ratio
+- Avoid clutter \to unnecessary grid lines, labels, or information
+- Prefer charts that add _meaning_, not decoration
+
+#+attr_latex: :width .6\linewidth
+[[./img/minimize-ink.png]]
+
+#+latex: \vfill\pause
+
+Use Commonly Accepted Conventions
+- Origin at (0,0) unless there’s a reason not to
+- Independent variable → x-axis; dependent → y-axis
+- Linear, evenly spaced scales increasing left-to-right and bottom-to-top.
+
+#+latex: \vfill\pause
+
+Avoid Ambiguity
+- Always show axes, scale divisions, and origin
+- Clearly identify each curve or bar
+- Avoid mixing unrelated variables in the same chart
+
+* Common Charting Mistakes 1/3
+
+Too Many Alternatives
+- Readers can only grasp 5--7 messages at once
+- Keep it simple:  
+  - Line chart → max of 6 curves  
+  - Bar/column chart → max of 10 bars  
+  - +Pie chart → ≤ 8 slices+ (strikethrough by myself, never use pie charts)
+  - Histogram → at least 5 data points per bucket
+
+#+latex: \vfill\pause
+
+Too Many Y-Variables
+- Avoid plotting several y-axes
+- Makes interpretation difficult \to use separate charts for clarity
+- Saving space should never come at the cost of readability
+
+#+attr_latex: :width .6\linewidth
+[[./img/too-many-ys.png]]
+
+* Common Charting Mistakes 2/3
+
+Using Symbols Instead of Text
+- Readers should never have to look up what a symbol means
+- Use keywords directly on the chart instead of cryptic symbols
+- The goal is instant recognition \to not visual minimalism
+
+#+attr_latex: :width .6\linewidth
+[[./img/code-text.png]]
+
+#+latex: \vfill\pause
+
+Extraneous Information
+- Each chart should convey one clear message
+- Remove unnecessary grid lines, decorations, or redundant labels
+- Match grid granularity to the precision needed
+  
+* Common Charting Mistakes 3/3
+
+Improper Scale Ranges
+- Automatic scaling can mislead \to adjust ranges manually when needed
+- Avoid showing empty or irrelevant regions of data
+- Choose scales that highlight trends, not distort them
+
+#+latex: \vfill\pause
+
+Wrong Chart Type
+- Line charts imply interpolated values \to use only for continuous variables
+- Bar or pie charts are better for categorical comparisons (e.g., CPU types)
+- Misusing chart types confuses interpretation and weakens the message.
+
+#+attr_latex: :width .45\linewidth
+[[./img/wrong-type-of-chart.png]]
+
+* Pictorial games /aka/ Deceptive use of graphics 1/4
+
+#+begin_center
+``A picture is worth a thousand words'' and can deceive just as much
+#+end_center
+
+Unlike honest mistakes, pictorial games are intentional manipulations to mislead
+- Common in advertising and trade press, less so in technical literature
+- Purpose: exaggerate differences or distort reality through visual tricks
+  
+# Examples: 1/ Distorted scales and baselines; 2/ 3D effects hiding
+# proportions; 3/ Selective truncation of data; 4/ PInconsistent visual
+# encodings.
+
+#+latex: \vfill\pause
+
+Using Nonzero Origins to Emphasize the Difference
+- (a) MINE is much much better than YOURS and
+- (b) MINE and YOURS are almost the same.
+
+**                                                          :B_column:BMCOL:
+:PROPERTIES:
+:BEAMER_col: 0.6
+:END:
+
+#+attr_latex: :width .9\linewidth
+[[./img/inappropriate-scale.png]]
+
+**                                                                   :BMCOL:
+:PROPERTIES:
+:BEAMER_col: 0.4
+:END:
+
+#+latex: \pause
+
+#+attr_latex: :width .9\linewidth
+[[./img/inappropriate-scale-better.png]]
+
+* Pictorial games /aka/ Deceptive use of graphics 2/4
+
+The ``Double-Whammy'' Graph, Dramatizing Performance Trends
+- Plotting two metrics on the same chart doubles the emotional impact
+- Example: Throughput vs. Response Time  
+  - As response time increases, throughput decreases
+  - Both convey the same information
+    - /but shown together, they appear twice as bad/
+- Used deliberately to amplify the perceived decline or problem
+
+#+attr_latex: :width .5\linewidth
+[[./img/double-whammy.png]]
+
+*Lesson:* Always question whether multiple metrics in a chart are
+*independent* or just *mirror images* of each other \to or simply avoid multiple metrics
+
+* Pictorial games /aka/ Deceptive use of graphics 3/4
+
+Performance metrics are often random variables
+- Results vary across runs
+
+#+latex: \pause\vfill
+  
+Plotting Random Quantities without Showing Confidence Intervals
+- Reporting only the mean hides uncertainty
+  - Always show confidence intervals to express statistical variation
+- Overlapping intervals ⇒ systems are statistically indistinguishable
+- Without them, charts can mislead (superiority may be insignificant)
+
+#+attr_latex: :width .6\linewidth
+[[./img/confidence.png]]
+
+* Pictorial games /aka/ Deceptive use of graphics 4/4
+
+Histogram cell size: choosing bucket widths alters apparent distribution
+- Too large → hides variation; too small → noisy and confusing
+
+#+attr_latex: :width .6\linewidth
+[[./img/histogram-bucket-width.png]]
+
+#+latex: \vfill\pause
+
+Broken scales in bar charts: start mid-axis to amplify tiny differences
+- Makes small performance gaps look dramatic
+- Always check whether the scale starts at zero
+
+#+attr_latex: :width .6\linewidth
+[[./img/broken-scale.png]]
+
+* References
+
+#+latex: {\small
+- Chapter 10. Jain, Raj. The art of computer systems performance
+  analysis: techniques for experimental design, measurement,
+  simulation, and modeling. New York: John Wiley,
+  c1991. ISBN 0471503363.
+- [[https://github.com/schnorr/lps][Literate Programming and Statistics (CMP595)]]. Lucas M. Schnorr,
+  Jean-Marc Vincent. 
+#+latex: }
