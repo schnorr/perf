@@ -262,5 +262,8 @@ Broken scales in bar charts: start mid-axis to amplify tiny differences
   simulation, and modeling. New York: John Wiley,
   c1991. ISBN 0471503363.
 - [[https://github.com/schnorr/lps][Literate Programming and Statistics (CMP595)]]. Lucas M. Schnorr,
-  Jean-Marc Vincent. 
+  Jean-Marc Vincent.
+- Performance Evaluation Of Computer And Communication
+  Systems. Jean-Yves Le Boudec. ISBN:
+  978-2-940222-40-7. 2010. https://leboudec.github.io/perfeval/
 #+latex: }
