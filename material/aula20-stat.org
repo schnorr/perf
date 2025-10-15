@@ -405,6 +405,154 @@ Examples
     
 - Taking a Mean of a Ratio with Different Bases \to Ratio Games
 
+* Summarizing variability: it matters a lot
+
+- Summarizing data by a single number, such as the mean, is rarely enough
+- Always include a measure of variability in any data summary
+
+#+latex: \vfill\pause
+
+- Two systems with the same mean can behave very differently:
+  - (a): Response time is consistently close to the mean (low variability)
+  - (b): Response time fluctuates widely (high variability).
+- Even if both have a mean of 2 seconds,
+  - (a): predictable and stable; (b): unpredictable and unreliable
+
+#+attr_latex: :width .6\linewidth
+[[./img/low-high-variability.png]]
+
+#+latex: \pause
+
+- Preferred low variability \to stability often matters more than avg perf
+
+* Indices of dispersion
+
+- Variability in data can be summarized using different measures
+- Common indices of dispersion include:
+  - Range (min and max values)
+  - Variance or Standard Deviation
+  - 10th and 90th Percentiles
+  - Semi-Interquartile Range (SIQR)
+  - Mean Absolute Deviation (MAD)
+- Each index captures spread differently and has its own advantages
+
+* Details on dispersion indices 1/2
+** Range
+
+- Range = Maximum -- Minimum
+- Easy to compute but highly sensitive to outliers
+- Not useful if the variable is unbounded, since extreme values can distort it
+- Only meaningful when the variable is known to have natural bounds
+
+#+latex: \pause
+** Variance and Standard Deviation
+
+- Variance (s²) measures average squared deviation from the mean:
+  s^2 = Σ(xᵢ - x̄)^2 / (n - 1)
+- Standard deviation (s) is the square root of variance, expressed in the same units as the data
+  - Preferred over variance for interpretability
+- Coefficient of Variation (C.O.V.)
+  C.O.V. = s / x̄
+  - Compares variability across scales
+  - Example: C.O.V. = 0.2 is small; C.O.V. = 5 is large
+
+* Details on dispersion indices 2/2
+** Percentiles and Quantiles
+
+- Percentiles divide the data distribution into 100 equal parts
+- Quantiles express percentiles as fractions (ex: 90th percentile)
+- Deciles: data at every 10%; Quartiles divide into four parts
+  - Interquartile Range (IQR) = Q3 - Q1
+  - Semi-Interquartile Range (SIQR) = (Q3 - Q1) / 2
+- SIQR is robust to outliers and suited for skewed distributions
+
+#+latex: \pause
+** Mean Absolute Deviation (MAD)
+
+- MAD = Average of absolute deviations from the mean
+- Simpler to compute than standard deviation (no squaring or square roots)
+- Less affected by outliers than variance
+
+** Sample MAD                                                      :B_block:
+:PROPERTIES:
+:BEAMER_col: 0.45
+:BEAMER_env: block
+:END:
+#+begin_export latex
+\[
+\mathrm{MAD} = \frac{1}{n} \sum_{i=1}^{n} \left| x_i - \bar{x} \right|
+\]
+#+end_export
+
+** Population MAD                                                  :B_block:
+:PROPERTIES:
+:BEAMER_col: 0.45
+:BEAMER_env: block
+:END:
+#+begin_export latex
+\[
+\mathrm{MAD} = \frac{1}{N} \sum_{i=1}^{N} \left| x_i - \mu \right|
+\]
+#+end_export
+
+* Choosing the right dispersion index
+
+- Range: Useful only for bounded variables
+- Variance / Standard Deviation: Common, but affected by outliers
+- Mean Absolute Deviation: Simple and moderately robust
+- Semi-Interquartile Range: Highly resistant to outliers, ideal with median
+- Use SIQR when there is a skewed distribution and the median is used as the central tendency
+- For categorical data, specify dispersion by listing the top categories covering a given percentile (e.g., top 90%)
+
+* Example of Percentiles and SIQR
+
+#+begin_src R :results file output graphics :file pdf_babel/sequence_plot.pdf :exports none :width 6 :height 3 :session *R*
+options(crayon.enabled=FALSE)
+suppressMessages(library(tidyverse))
+set.seed(123)
+Y=rnorm(32, mean = 10, sd = 2)
+tibble(Y=Y) |>
+  mutate(X = 1:n()) -> df.l
+df.l |>
+  ggplot(aes(x=X, y=Y)) +
+  geom_line(alpha=.2) +
+  geom_point() +
+  ylim(0, NA) +
+  ylab("Value") +
+  xlab("Order") +
+  ggtitle("Sequence Plot") +
+  theme_bw(base_size = 16) +
+  theme(
+      legend.title = element_blank(),
+      plot.margin = unit(c(0, 0, 0, 0), "cm"),
+      legend.spacing = unit(1, "mm"),
+      legend.position = "right",
+      legend.justification = "left",
+      legend.box.spacing = unit(0, "pt"),
+      legend.box.margin = margin(0, 0, 0, 0),
+      axis.text.x = element_text(angle=45, vjust=1, hjust=1)    
+  )  
+#+end_src
+
+#+RESULTS:
+[[file:pdf_babel/sequence_plot.pdf]]
+
+#+attr_latex: :width .6\linewidth
+[[./pdf_babel/sequence_plot.pdf]]
+
+#+begin_src R :results output :session *R* :exports none :noweb yes :colnames yes
+
+#+end_src
+
+- Given src_R[:exports results :results value :session]{length(Y)}  CPU time observations:
+  - 10th percentile = src_R[:exports both :results value :session]{quantile(Y, 0.10)} 
+  - 90th percentile = src_R[:exports both :results value :session]{quantile(Y, 0.90)} 
+  - Q1 = src_R[:exports both :results value :session]{quantile(Y, 0.25)}
+  - Median (Q2) = src_R[:exports both :results value :session]{quantile(Y, 0.50)}
+  - Q3 = src_R[:exports both :results value :session]{quantile(Y, 0.75)}
+- Interquartile Range @@latex:\linebreak@@ src_R[:exports both :results value :session]{quantile(Y, 0.75)-quantile(Y, 0.25)}
+- Semi-Interquartile Range (SIQR) @@latex:\linebreak@@ src_R[:exports both :results value :session]{(quantile(Y, 0.75)-quantile(Y, 0.25))/2}
+
 * References
 
 #+latex: {\small
