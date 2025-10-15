@@ -1,0 +1,416 @@
+# -*- coding: utf-8 -*-
+# -*- mode: org -*-
+#+startup: beamer overview indent
+#+LANGUAGE: pt-br
+#+TAGS: noexport(n)
+#+EXPORT_EXCLUDE_TAGS: noexport
+#+EXPORT_SELECT_TAGS: export
+
+#+Title: Comp. Syst. Perf. Analysis
+#+SubTitle: Summarizing Measured Data
+#+Author: Prof. Lucas Mello Schnorr
+#+Date: \copyleft
+
+#+LaTeX_CLASS: beamer
+#+LaTeX_CLASS_OPTIONS: [xcolor=dvipsnames,10pt]
+#+OPTIONS: H:1 num:t toc:nil \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+#+LATEX_HEADER: \input{org-babel.tex}
+
+* Summarizing measured data
+
+From Raw Measurements to Insight
+
+- Performance studies often produce hundreds or millions of observations
+- Raw data are too large and complex to interpret directly
+
+#+latex: \vfill\pause
+
+- Analysts must summarize results to reveal patterns and support decisions
+- Different summarization methods exist
+  - each with its own suitability and limitations
+
+#+latex: \vfill\pause
+
+But before doing statistics, one must understand probability
+
+* Basic probability: core definitions and measures 1/3
+
+Independent Events
+- Two events are *independent* if the occurrence of one does *not affect* the probability of the other
+- Example: A coin flip and a die roll are independent
+
+#+latex: \pause\vfill
+
+Random Variable
+- A variable whose values occur according to *probability rules*
+- Can be *discrete* (countable) or *continuous* (uncountable outcomes)
+
+* Basic probability: core definitions and measures 2/3
+
+Cumulative Distribution Function (CDF)
+- Gives the probability that a variable *x* <= *a*:  
+     \[
+     F_x(a) = P(x \le a)
+     \]
+- The CDF grows from 0 to 1 as *a* increases.
+
+#+latex: \pause\vfill
+
+Probability Density Function (PDF)
+- *Derivative of the CDF*, representing likelihood density for continuous vars.
+- Probability between x_1 and x_2 = area under the curve:
+     \[
+     P(x_1 < x < x_2) = \int_{x_1}^{x_2} f(x)dx
+     \]
+
+- The probability density function fully characterizes the random
+  variable but it is also complex object \to requires simpler metrics
+
+* Basic probability: core definitions and measures 3/3
+
+Mean \to /aka/ the _Expected Value_ (the true mean)
+- The *average* of possible values, weighted by their probabilities
+- For discrete: \( E[x] = \sum x_i p_i \);  @@latex: \linebreak @@
+  for continuous: \( E[x] = \int x f(x) dx \).
+
+#+latex: \pause\vfill
+
+Variance & Standard Deviation
+- Variance measures *spread* around the mean:
+  
+     \( \sigma^2 = E[(x - \mu)^2] \)
+     
+- Standard deviation \sigma = \sqrt{Variance}
+  
+  - Such normalization allows to compare it with the expected value
+  
+#+latex: \pause\vfill
+
+Coefficient of Variation (C.O.V.)
+- Normalized measure of variability:
+  \( C.O.V. = \frac{\sigma}{\mu} \).  
+- Useful for comparing variability across datasets
+
+* The Normal Distribution
+
+Normal Distribution (Gaussian)
+   - The most common distribution in analysis
+   - Characterized by *mean (µ)* and *standard deviation (σ)*
+   - A *standard normal* has µ = 0, σ = 1 → denoted *N(0, 1)*
+
+#+latex: \vfill\pause
+   
+#+attr_latex: :width .7\linewidth
+[[./img/Standard_deviation_diagram.pdf]]
+
+- Dark blue is less than one standard deviation from the mean. For the
+  normal distribution, this accounts for about 68% of the set.
+- Two standard deviations from the mean (medium and dark blue) account
+  for about 95%
+- Three standard deviations (light, medium, and dark blue) account for
+  about 99.7%
+
+* Other Gaussian distributions
+
+The smaller the variance the more ``spiky'' the distribution.
+
+#+begin_src R :results file output graphics :file "pdf_babel/normal_distribution.pdf" :exports none :width 6 :height 2.5 :session *R*
+library(ggplot2)
+library(ggthemes)
+library(tidyverse)
+
+xmin <- -5
+xmax <- 5
+ymin <- 0
+ymax <- 1.5
+
+dfnorm <- data.frame(mu = c(0, 0, 0, -2),
+                     sigma2 = c(.1, 1, 5, .5))
+dfnorm$label <- paste0("mu=", dfnorm$mu, ", sigma^2=", dfnorm$sigma2)
+
+df <- data.frame(x = c(xmin, xmax), y = c(ymin, ymax))
+
+p <- ggplot(data = df, aes(x = x, y = y)) +
+  xlim(xmin, xmax) + ylim(ymin, ymax) +
+  theme_classic() +
+  guides(colour = guide_legend("")) +
+  ylab("f(x)")
+
+# Add the normal density functions
+p + 
+  stat_function(fun = dnorm, 
+                args = list(mean = dfnorm[1, "mu"], sd = sqrt(dfnorm[1, "sigma2"])),
+                aes(color = dfnorm[1, "label"])) +
+  stat_function(fun = dnorm, 
+                args = list(mean = dfnorm[2, "mu"], sd = sqrt(dfnorm[2, "sigma2"])),
+                aes(color = dfnorm[2, "label"])) +
+  stat_function(fun = dnorm, 
+                args = list(mean = dfnorm[3, "mu"], sd = sqrt(dfnorm[3, "sigma2"])),
+                aes(color = dfnorm[3, "label"])) +
+  stat_function(fun = dnorm, 
+                args = list(mean = dfnorm[4, "mu"], sd = sqrt(dfnorm[4, "sigma2"])),
+                aes(color = dfnorm[4, "label"]))
+#+end_src
+
+#+RESULTS:
+[[file:pdf_babel/normal_distribution.pdf]]
+
+#+attr_latex: :width \linewidth
+[[./pdf_babel/normal_distribution.pdf]]
+
+* Why Normal Distribution Matters                                  :noexport:
+
+- The sum of independent normal variables is also normal
+- By the *Central Limit Theorem (CLT)* → The sum of many independent
+  variables (from *any* distribution) tends to be *normally distributed*
+- Hence, normality underpins most performance measurement and modeling.
+
+* The Central Limit Theorem
+
+- Let $\{\rv{X_1}, \rv{X_2}, \dots, \rv{X_n}\}$ be a random sample of size
+  $n$ (\ie a sequence of *independent* and *identically distributed*
+  random variables with expected values $\mu$ and variances $\sigma^2$)
+- The *sample mean* of these random variables is:
+  #+BEGIN_EXPORT latex
+  \begin{equation*}
+  \rv{S_n} =  \frac{1}{n} (\rv{X_1} + \dots + \rv{X_n})
+  \end{equation*}
+  #+END_EXPORT
+  $\rv{S_n}$ is a random variable too!
+- It is *unbiased*, \ie $\E[\rv{S_n}]=\E[\rv{X}]$
+- For large n's, the distribution of $\rv{S_n}$ is approximately
+  *normal* with *mean $\mu$* and *variance $\frac{\sigma^2}{n}$*
+  #+BEGIN_EXPORT latex
+  \begin{equation*}
+  \rv{S_n} \xrightarrow[n\to\infty]{} \N\left(\mu,\frac{\sigma^2}{n}\right)
+  \end{equation*}
+  #+END_EXPORT
+
+* CLT Illustration: the mean smooths distributions
+#+begin_src R :results file output graphics :file "pdf_babel/CLT_illustration.pdf" :exports none :width 9 :height 6 :session
+library(ggplot2)
+library(ggthemes)
+
+triangle <- function(n=10) {
+  sqrt(runif(n)) 
+}
+
+broken <- function(n=10) {
+  x=runif(n);
+  x/(1-x);
+}
+
+broken_mid <- function(n=10) {
+  x=(runif(n)+runif(n))/2;
+  x/(1-x);
+}
+
+
+generate <- function(n=50000,N=c(1,2,5,10,15,20,30,100), law=c("unif","binom","triangle")) {
+  df=data.frame();
+  for(l in law) {
+    for(p in N) {
+      X=rep.int(0,n);
+      for(i in 1:p) {
+        X = X + switch(l, unif = runif(n),
+                          binom = rbinom(n,1,.5), 
+                          exp=rexp(n,rate = 2), 
+                          norm=rnorm(n,mean = .5),
+                          triangle=triangle(n)-1/6,
+                          broken=broken(n),
+                          broken_mid=broken_mid(n));
+      }
+      X = X/p;
+      df=rbind(df,data.frame(N=p,SN=X,law=l));
+    }
+  } 
+  df;
+}
+d=generate()
+ggplot(data=d,aes(x=SN)) + geom_density(aes(y = ..density..)) + 
+     facet_grid(law~N) + theme_classic() + xlab("") + 
+     scale_x_continuous(breaks=c(0,.5,1))
+#+end_src
+
+#+RESULTS:
+[[file:pdf_babel/CLT_illustration.pdf]]
+
+  
+Start with an *arbitrary* distribution and compute the distribution of
+$S_n$ for increasing values of $n$.
+#+BEGIN_CENTER
+#+LaTeX: \includegraphics<1>[width=.8\linewidth]{pdf_babel/CLT_illustration.pdf}
+#+END_CENTER
+
+* How to estimate the _Expected Value_? 1/2
+
+To empirically *estimate* the expected value of a random variable
+\rv{X}, one repeatedly measures observations of the variable and
+computes the arithmetic mean of the results. \bigskip
+
+This is called the *sample mean*.
+
+* How to estimate the _Expected Value_? 2/2
+
+Unfortunately, if you repeat the estimation, you may get a different
+value since \rv{X} is a random variable \dots
+
+#+begin_src R :results output graphics :file pdf_babel/CI_illustration.pdf :exports none :width 5 :height 3 :session
+library(tidyverse)
+set.seed(14)
+mu = 500
+N = 30
+n = 40
+X = 0
+for (i in 1:N) {
+    X = X + mu + runif(n, min = -1, max = 1) # Hence var=1/3
+}
+# so sigma_n = sqrt(1/3)/sqrt(N)
+ci = 2*sqrt(1/3)/sqrt(N);
+
+X = X/N
+
+# length(X[X >= 1775.5 & X <= 1776.6])/length(X)
+
+df = data.frame(x = X, y = seq(1:length(X)))
+df$valid = 1
+df[abs(df$x - mu) > ci, ]$valid = 0
+ggplot(df, aes(x = x, y = y, color = factor(valid))) + geom_point() + 
+    geom_errorbarh(aes(xmax = x - ci, xmin = x + ci)) + 
+    geom_vline(xintercept = mu) + 
+    theme_classic() + guides(colour = guide_legend("")) +
+    xlim(mu-3*ci,mu+3*ci) + 
+    ylab("Trial #") + xlab("Observation: sample mean with \nconfidence interval") +
+    coord_flip() + ggtitle(paste(n," observations of the mean of ",N," samples"))
+#+end_src
+
+#+RESULTS:
+[[file:pdf_babel/CI_illustration.pdf]]
+
+#+attr_latex: :width .7\linewidth
+[[./pdf_babel/CI_illustration.pdf]]
+
+When $n$ is large:
+#+BEGIN_EXPORT latex
+\begin{center}
+  \scalebox{.9}{$\displaystyle
+  P\left(\mu\in
+    \left[\rv{S_n}-2\frac{\sigma}{\sqrt{n}},\rv{S_n}+2\frac{\sigma}{\sqrt{n}}\right]\right)
+  = P\left(\rv{S_n}\in
+    \left[\mu-2\frac{\sigma}{\sqrt{n}},\mu+2\frac{\sigma}{\sqrt{n}}\right]\right)
+  \approx  95\%$}
+\end{center}
+\uncover<2>{There is 95\% of chance that the \alert{true mean} lies
+  within 2$\frac{\sigma}{\sqrt{n}}$ of the \alert{sample mean}.}
+#+END_EXPORT
+
+* Summarizing data by a single number
+
+Often, we summarize a dataset using
+
+a *single representative value*, called an *average*.
+
+#+latex: \vfill\pause
+
+The three main indices of central tendency are
+1. **Sample Mean** – arithmetic average @@latex: \linebreak@@(sum of all observations / number of 
+   observations).
+2. **Sample Median** – middle value when data is sorted.
+3. **Sample Mode** – most frequent value (or the peak in a histogram).
+
+#+latex: \vfill
+
+These measures represent the *center* of the data’s distribution.
+
+* Mean, Median, and Mode in practice
+** Existence and Uniqueness
+- **Mean** and **median** always exist and are unique.
+- **Mode** may not exist or may not be unique
+- The relationship between them depends on the **shape of the distribution**:
+  - Symmetric → mean = median = mode
+  - Right-skewed → mean > median > mode
+  - Left-skewed → mean < median < mode
+  - Uniform → no mode, mean = median
+
+#+latex: \pause
+** Comparison and Use
+- **Mean**:
+  - Uses all data points (fully informative).
+  - Sensitive to *outliers*.
+  - Has *linearity*: E[x + y] = E[x] + E[y].
+- **Median** and **Mode**:
+  - More *resistant* to outliers, but ignore some information from the sample
+- Choice depends on context:
+  - Use **mean** when distribution is well-behaved
+  - Use **median/mode** when data is skewed or has extreme values
+    
+* Five PDFs showing relationships
+
+#+attr_latex: :width .3\linewidth :center nil
+[[./img/pdf-a.png]]
+#+attr_latex: :width .3\linewidth :center nil
+[[./img/pdf-b.png]]
+#+attr_latex: :width .3\linewidth :center nil
+[[./img/pdf-c.png]]
+#+attr_latex: :width .3\linewidth :center nil
+[[./img/pdf-d.png]]
+#+attr_latex: :width .3\linewidth :center nil
+[[./img/pdf-e.png]]
+
+  - Symmetric → mean = median = mode
+  - Right-skewed → mean > median > mode
+  - Left-skewed → mean < median < mode
+  - Uniform → no mode, mean = median
+
+* Selecting the Proper Index of Central Tendency
+Avoiding Common Mistakes
+- Inexperienced analysts often use the **mean** by default
+  - even when it’s not appropriate (wrong)
+- The correct choice depends on:
+  1. **Type of variable**
+  2. **Meaning of the total**
+  3. **Shape (skewness) of the distribution**
+
+#+latex: \vfill\pause
+     
+Guidelines
+- If the variable is **categorical** → use **Mode**  
+- If the **total** of observations is meaningful → use **Mean**  
+- If total is **not** meaningful:
+  - If **symmetrical**, any of mean/median/mode is fine.
+  - If **skewed**, use **Median** (more typical observation).
+
+#+latex: \vfill\pause
+
+Examples
+- Most Used Resource → Mode  
+- Interarrival Time → Mean  
+- Load on a Computer → Median  
+- Average Configuration → Median of devices, memory, processors
+  
+* Common misuses of means
+
+- Using Mean of Significantly Different Values
+- Using Mean without Regard to the Skewness of Distribution
+- Multiplying Means To Get the Mean of a Product
+  - The mean of a product of _two random variables_ equals the product of their means *only if they are independent*.
+    - Mathematically:  @@latex:\linebreak@@
+      E(xy) = E(x)E(y)  ⟺  x and y are independent
+    - If x and y are correlated:   @@latex:\linebreak@@
+      E(xy) ≠ E(x)E(y)
+  - On a timesharing system, the total number of users and the number
+    of subprocesses for each user are monitored. The average number of
+    users is 23. The average number of subprocesses per user is 2.
+    What is the average number of subprocesses?
+    
+- Taking a Mean of a Ratio with Different Bases \to Ratio Games
+
+* References
+
+#+latex: {\small
+- Chapter 12. Jain, Raj. The art of computer systems performance
+  analysis: techniques for experimental design, measurement,
+  simulation, and modeling. New York: John Wiley,
+  c1991. ISBN 0471503363.
+- SMPE. Arnaud Legrand and Jean-Marc Vincent.
+#+latex: }
