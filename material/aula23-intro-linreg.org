@@ -1,0 +1,91 @@
+# -*- coding: utf-8 -*-
+# -*- mode: org -*-
+#+startup: beamer overview indent
+#+LANGUAGE: pt-br
+#+TAGS: noexport(n)
+#+EXPORT_EXCLUDE_TAGS: noexport
+#+EXPORT_SELECT_TAGS: export
+
+#+Title: Comp. Syst. Perf. Analysis
+#+SubTitle: Linear Regression
+#+Author: Prof. Lucas Mello Schnorr
+#+Date: \copyleft
+
+#+LaTeX_CLASS: beamer
+#+LaTeX_CLASS_OPTIONS: [xcolor=dvipsnames,10pt]
+#+OPTIONS: H:1 num:t toc:nil \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+#+LATEX_HEADER: \input{org-babel.tex}
+
+* Simple Linear Regression Models
+
+Regression models are among the most common statistical models used by
+analysts \to They allow estimation or prediction of a random variable as
+a function of other variables
+
+#+latex: \vfill\pause
+
+- **Response variable**: the variable to be predicted
+- **Predictor variables** (or factors): the variables used for prediction
+
+#+latex: \vfill\pause
+
+All predictors are assumed to be **quantitative**
+- arithmetic operations are meaningful
+
+#+latex: \vfill\pause
+
+** Importance of Linear Regression                                 :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+
+- Understand concepts such as:
+  - Confidence intervals for model parameters
+  - Goodness of fit
+- These concepts are essential for
+  - Analysis of experimental designs
+
+* Linear Regression Models
+
+Regression can be used for **linear** and **nonlinear** models
+- The most common application is finding the **best linear model**
+
+#+latex: \vfill\pause
+
+Such models are called **linear regression models**
+
+When there is only **one predictor variable**
+- the model is called a **simple linear regression model**
+
+#+latex: \vfill\pause
+
+** Definition of a Good Model                                      :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+
+- The first question: *What is a good model?*
+- Consider data points and a straight-line model:
+  - Some lines fit the data well
+  - Others do not
+- A good model has its line **close to most of the data points**
+
+* Summary of this short introduction
+
+- Regression models predict a response variable based on predictors
+- Simple linear regression: one predictor variable
+
+#+latex: \vfill\pause
+
+- A good model minimizes vertical errors between predictions and data
+- The **least-squares method** defines the “best” model mathematically
+
+* References
+
+#+latex: {\small
+- Chapter 14. Jain, Raj. The art of computer systems performance
+  analysis: techniques for experimental design, measurement,
+  simulation, and modeling. New York: John Wiley,
+  c1991. ISBN 0471503363
+- SMPE. Arnaud Legrand and Jean-Marc Vincent
+#+latex: }
