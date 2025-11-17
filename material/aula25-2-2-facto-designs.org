@@ -1,0 +1,97 @@
+# -*- coding: utf-8 -*-
+# -*- mode: org -*-
+#+startup: beamer overview indent
+#+LANGUAGE: pt-br
+#+TAGS: noexport(n)
+#+EXPORT_EXCLUDE_TAGS: noexport
+#+EXPORT_SELECT_TAGS: export
+
+#+Title: Comp. Syst. Perf. Analysis
+#+SubTitle: Introduction to 2^k Factorial Designs
+#+Author: Prof. Lucas Mello Schnorr
+#+Date: \copyleft
+
+#+LaTeX_CLASS: beamer
+#+LaTeX_CLASS_OPTIONS: [xcolor=dvipsnames,10pt]
+#+OPTIONS: H:1 num:t toc:nil \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+#+LATEX_HEADER: \input{org-babel.tex}
+
+* 2^k Factorial Designs
+
+- Often factor effects are monotonic
+  - Performance increases or decreases as a factor moves from min to max
+  - Example: performance improves when more memory is avaivable
+
+#+latex: \vfill\pause
+
+- Full factorial designs may be too costly when many factors exist
+  - 1st step: reduce the number of factors by testing only those likely to matter
+
+#+latex: \vfill\pause
+    
+- A 2^k design examines k factors, each with two levels
+  - Useful early in performance studies with many candidate factors
+  - Goal: identify which factors have the strongest impact
+
+* 2² Designs: Starting with k = 2
+
+To introduce 2^k designs, begin with the simplest case
+- two factors, each at two levels
+- Easy to analyze and illustrates factor effects and interactions
+  
+Example:
+- Memory size (factor A) and
+- Cache size (factor B) for a workstation
+
+* Example: Memory (A) and Cache (B)
+
+Two levels for memory: 4 MB and 16 MB (xA)
+
+Two levels for cache: 1 KB and 75 KB (xB)
+
+  | Memory (xA) | Cache (xB) |  y |
+  |-------------+------------+----|
+  | 4 MB        | 1 KB       | 15 |
+  | 16 MB       | 1 KB       | 45 |
+  | 4 MB        | 75 KB      | 25 |
+  | 16 MB       | 75 KB      | 75 |
+
+#+latex: \vfill\pause
+
+Define coded variables: xA = ±1, xB = ±1
+
+Regression model: y = q0 + qA xA + qB xB + qAB xA xB
+
+* Example: Solving the 2^2 Regression
+
+Regression model: y = q0 + qA xA + qB xB + qAB xA xB
+
+#+latex: \pause\vfill
+  
+Solving the 2² Regression
+- Substituting the four observations yields four linear equations
+
+  #+begin_src C
+15 = q0 – qA – qB + qAB
+45 = q0 + qA – qB – qAB
+25 = q0 – qA + qB + qAB
+75 = q0 + qA + qB + qAB
+  #+end_src
+
+- Solving gives: =y = 40 + 20 xA + 10 xB + 5 xA xB=
+
+- Interpretation:
+  - Mean performance: 40 MIPS
+  - Effect of memory (A): 20 MIPS
+  - Effect of cache (B): 10 MIPS
+  - Interaction A×B: 5 MIPS
+
+* References
+
+#+latex: {\small
+- Chapter 17, Section 17.1. Jain, Raj. The art of computer systems
+  performance analysis: techniques for experimental design,
+  measurement, simulation, and modeling. New York: John Wiley,
+  c1991. ISBN 0471503363
+- SMPE. Arnaud Legrand and Jean-Marc Vincent
+#+latex: }
