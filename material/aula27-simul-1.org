@@ -127,6 +127,84 @@ Use modern programming languages
 - Core: compilation based for faster simulation
 - Ease: use API for scripting languages
 
+* Mistakes: Unverified and Invalid Models
+
+Situations that may arise with unverified models
+- Bugs or programming errors that render conclusions meaningless
+- Large simulation programs with excess of extrapolation studies
+- Error-free code can still be invalid
+  - When assumptions about system behavior are incorrect
+
+#+latex: \vfill\pause
+
+** Key ideia: _validation_ is essential                            :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+Results should align against
+- Analytical models (the idea)
+- Measurements (the reality)
+- Domain intuition (the feeling)
+
+#+latex: \vfill\pause
+
+Simulation outputs must always be treated with suspicion
+- Until independently verified and confirmed
+
+* Mistake: Too Short Simulations
+
+Short simulations produce results
+- Dominated by initial conditions rather than steady-state behavior
+  - Misleading performance estimates and unreliable conclusions
+
+- Required simulation length depends on
+  - Desired accuracy and
+  - The variance of observed metrics
+
+- Simple stats fail because simulation outputs are often correlated over time
+
+#+latex: \pause
+
+** Key ideia                                                       :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+
+Proper techniques include
+- Warm-up removal + Batching + Ensuring adequate observation periods
+
+#+latex: \pause\vfill
+
+** How batching works                                              :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+
+Run one long simulation after warm-up
+1. Divide the output time-series into k contiguous batches of equal length.
+2. Compute the average of each batch.
+3. Treat these batch means as approximately independent observations.
+
+#+latex: \pause
+
+Use these means to compute:
+- Overall estimates (e.g., system delay) + Confidence intervals
+
+
+
+* Mistake: Poor random-number generators and seed selection
+
+Poor Random-Number Generators
+- Using weak or homemade generators can introduce bias
+  - Rely on well-tested, validated RNGs from trusted libraries
+
+#+latex: \vfill\pause
+
+Improper Selection of Seeds
+- Reusing or poorly choosing seeds creates correlated streams
+- Assign distinct, well-spaced seeds to ensure independent random behavior
+
+
 * References
 
 #+latex: {\small
