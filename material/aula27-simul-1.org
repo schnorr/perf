@@ -1,0 +1,138 @@
+# -*- coding: utf-8 -*-
+# -*- mode: org -*-
+#+startup: beamer overview indent
+#+LANGUAGE: pt-br
+#+TAGS: noexport(n)
+#+EXPORT_EXCLUDE_TAGS: noexport
+#+EXPORT_SELECT_TAGS: export
+
+#+Title: Comp. Syst. Perf. Analysis
+#+SubTitle: Introduction to Simulation
+#+Author: Prof. Lucas Mello Schnorr
+#+Date: \copyleft
+
+#+LaTeX_CLASS: beamer
+#+LaTeX_CLASS_OPTIONS: [xcolor=dvipsnames,10pt]
+#+OPTIONS: H:1 num:t toc:nil \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+#+LATEX_HEADER: \input{org-babel.tex}
+
+* Introduction to Simulation
+
+- Simulation is an important tool for performance analysis
+  - When the real system is unavailable
+  - Or when many workloads/environments must be tested
+- Chosen during system design or procurement to compare alternatives
+  - Simulation may offer broader exploration of scenarios
+
+#+latex: \vfill\pause
+  
+- Despite its usefulness
+  - Many simulation projects fail or produce misleading results
+  - Failures often stem from imbalance
+    - Strong software skills but weak statistics
+    - Or strong statistics but weak software engineering
+
+#+latex: \vfill\pause
+
+- Large simulations frequently take far longer than expected
+  - Many are abandoned before completion
+
+#+latex: \vfill\pause
+
+** Agenda                                                          :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+
+- Common mistakes
+- Terminology
+- Types of simulations
+
+* Mistake: Choosing an inappropriate level of detail (1/2)
+
+Simulation can represent far more detail than analytical models
+
+But excessive detail increases:
+- Development time
+- Likelihood of bugs
+- Debugging effort
+- Execution time (often hours or days in large models)
+
+#+latex: \pause\vfill
+
+More detail is not always better:
+- Detailed models require detailed input data
+- Missing or approximate inputs can make a detailed model *less* accurate
+
+#+latex: \pause\vfill
+
+** Example: Simulating disk service time                           :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+- Simple approach: exponential service-time distribution
+- Detailed approach: simulate head movement and rotation
+
+#+latex: \pause
+
+- If sector/track references are unavailable, the detailed model may end up artificially generating random sector numbers and still producing exponential service times—but with much more complexity
+
+* Mistake: Choosing an inappropriate level of detail (2/2)    
+
+Detailed models also take significantly longer to build
+
+#+latex: \vfill\pause
+
+** Better approach                                                 :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+- Start with a simple model
+- Obtain early results and analyze sensitivities
+- Add detail only where it meaningfully impacts the results
+
+#+latex: \vfill\pause
+
+** Key idea                                                        :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+
+Incremental refinement!
+- Produces better, more reliable simulation models
+  - Instead of all-at-once detailed modeling
+
+* Mistake: Improper Programming Language Choice
+
+The programming language strongly affects
+- How quickly a simulation model can be developed
+- How quickly a simulation can run
+
+#+latex: \vfill\pause
+
+Special-purpose simulation languages
+- Reduce development time
+- Simplify tasks
+  - Verification using traces
+  - Statistical analysis
+  
+General-purpose languages offer
+- Greater portability and control over efficiency and runtime
+
+#+latex: \vfill\pause
+
+** Key ideia
+
+Use modern programming languages
+- Core: compilation based for faster simulation
+- Ease: use API for scripting languages
+
+* References
+
+#+latex: {\small
+- Chapter 24. Jain, Raj. The art of computer systems performance
+  analysis: techniques for experimental design, measurement,
+  simulation, and modeling. New York: John Wiley,
+  c1991. ISBN 0471503363
+- SMPE. Arnaud Legrand and Jean-Marc Vincent
+#+latex: }
