@@ -190,8 +190,6 @@ Run one long simulation after warm-up
 Use these means to compute:
 - Overall estimates (e.g., system delay) + Confidence intervals
 
-
-
 * Mistake: Poor random-number generators and seed selection
 
 Poor Random-Number Generators
@@ -204,7 +202,52 @@ Improper Selection of Seeds
 - Reusing or poorly choosing seeds creates correlated streams
 - Assign distinct, well-spaced seeds to ensure independent random behavior
 
+* Terminology 1/2
 
+- _State variables_ and _Events_
+
+#+latex: \vfill\pause
+
+- Continuous-Time Models
+  - State is defined at every instant
+  - Example: CPU scheduling
+- Discrete-Time Models
+  - State defined only at specific times
+  - Example: class attendance known on Friday
+
+#+latex: \vfill\pause
+
+- Continuous-State Models
+  - State variables take uncountably infinite values
+  - Example: time spend studying
+- Discrete-State Models (also called discrete-event models)
+  - State variables take discrete values
+  - Example: number of students or CPU queue length
+
+#+latex: \vfill\pause
+
+#+begin_center
+Continuity of time does not imply continuity of state and vice versa
+
+All four possible combinations.
+#+end_center
+
+* Terminology 2/2
+- Deterministic vs Probabilistic
+  - Deterministic gives identical outputs
+  - Probabilistic yields different outputs for same inputs
+#+latex: \vfill\pause
+- Static vs Dynamic
+  - Static models ignore time
+  - Dynamic models include time and evolving state
+#+latex: \vfill\pause
+- Linear vs Nonlinear
+  - Outputs are linear functions of inputs vs
+  - Nonlinear relationships
+#+latex: \vfill\pause    
+- Open vs Closed Models
+  - Open models receive external independent input
+  - Closed models circulate jobs internally
 * References
 
 #+latex: {\small
