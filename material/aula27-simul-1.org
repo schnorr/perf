@@ -248,6 +248,55 @@ All four possible combinations.
 - Open vs Closed Models
   - Open models receive external independent input
   - Closed models circulate jobs internally
+* Types of Simulations 1/2
+
+There are four types
+1. Emulation
+2. Monte Carlo
+3. Trace-driven
+4. Discrete-event
+
+#+latex: \vfill\pause
+
+** Emulation                                                       :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+- Hardware/firmware mimics another system
+- Mostly hardware design issues
+
+#+latex: \vfill\pause
+
+** Monte Carlo                                                     :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+- Static, no time axis
+- Models probabilistic phenomena using pseudo-random numbers
+  - Also used to estimate nonprobabilistic expressions
+
+* Types of Simulations 1/2
+
+** Trace-Driven                                                    :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+- Uses real-system traces as input
+  - Ideal for analyzing paging, caches, CPU scheduling, deadlock prevention, storage allocation
+- Trace Caveat
+  - Trace must be independent of the system studied
+  - e.g., page-fetch traces depend on replacement policy and cannot be
+    used to study other page replacement policies \to one would need a
+    trace of pages referenced
+- Time-Independent Traces
+
+** Discrete-Event                                                  :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+- Uses discrete-state models
+- Time may be discrete or continuous
+
 * References
 
 #+latex: {\small
@@ -255,5 +304,4 @@ All four possible combinations.
   analysis: techniques for experimental design, measurement,
   simulation, and modeling. New York: John Wiley,
   c1991. ISBN 0471503363
-- SMPE. Arnaud Legrand and Jean-Marc Vincent
 #+latex: }
