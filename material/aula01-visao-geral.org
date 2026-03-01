@@ -57,6 +57,7 @@
    |               1200 |      7 |      3 |
    |               1300 |      3 |      0 |
    |                 50 |      0 |      1 |
+   @@latex: \hfill@@ Qual link é melhor?
 4. Projetar experimentos eficientes
    - Coletar a maior quantidade de informação com o menor esforço
 5. Executar simulações corretamente
