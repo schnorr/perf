@@ -93,25 +93,16 @@ Extras
 
 * Avaliação
 
-*Duas provas* (P1 e P2)
-- Testará os aspectos teóricos da disciplina
-- As provas englobam os assuntos vistos até então
-  - Principalmente dissertativas
-
 *Trabalho Final* (TF)
-- Escolha de estudo de caso de análise
-- Apresentação para o grupo no final
-
-*Participação* (PA)
-- Tornar as aulas mais dinâmicas
-- Questionamentos, discussão
+- São três etapas
+- Em cada etapa, há uma apresentação para o grupo
 
 #+latex: \vfill\pause
 
 #+BEGIN_CENTER
 Nota final
 
-P1 \times 0.30 + P2 \times 0.30 + TF \times 0.30 + PA \times 0.10
+E1 \times 0.10 + E2 \times 0.20 + E3 \times 0.70
 #+END_CENTER
 
 #+latex: \pause
