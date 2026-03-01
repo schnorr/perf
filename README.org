@@ -27,11 +27,11 @@ eletiva proposta pelo Departamento de Informática Aplicada (INA) para
 alunos de diferentes cursos tais como CIC (Ciência da Computação) e
 ECP (Engenharia da Computação) do INF (Instituto de Informática) da
 UFRGS (Universidade Federal do Rio Grande do Sul).  Disponibilizamos
-aqui o material realcionado a esta disciplina.
+aqui o material relacionado a esta disciplina.
 
 * Material
 
-
+[[./material/]]
 
 * Bibliografia
 
