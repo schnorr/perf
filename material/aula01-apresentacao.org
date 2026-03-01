@@ -150,8 +150,7 @@ Alguns exemplos de trabalhos
 - Medir e analisar o desempenho de dois processadores
 - Caracterizar a carga de trabalho em um parque computacional
 - Medir e identificar os fatores que afetam a desempenho de um sistema GC
-- Construir um monitor para observar o desempenho em um sistema
-- Modelar o desempenho de um programa
+- Modelar o desempenho de um programa via mecanismo experimental
 - Comparar experimentalmente o desempenho de dois algoritmos alternativos
 - Averiguar o efeito do paralelismo em um programa de computador
 
