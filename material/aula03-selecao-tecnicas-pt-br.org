@@ -1,0 +1,216 @@
+# -*- coding: utf-8 -*-
+# -*- mode: org -*-
+#+startup: beamer overview indent
+#+LANGUAGE: pt-br
+#+TAGS: noexport(n)
+#+EXPORT_EXCLUDE_TAGS: noexport
+#+EXPORT_SELECT_TAGS: export
+
+#+Title: Análise de Desempenho de Sist. Comp.
+#+SubTitle: Seleção de Técnicas
+#+Author: Prof. Lucas Mello Schnorr
+#+Date: \copyleft
+
+#+LaTeX_CLASS: beamer
+#+LaTeX_CLASS_OPTIONS: [xcolor=dvipsnames,10pt]
+#+OPTIONS: H:1 num:t toc:nil \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+#+LATEX_HEADER: \input{org-babel.tex}
+
+* Selecionando uma Técnica de Avaliação
+
+Existem três técnicas
+#+begin_center
+Modelagem Analítica, Simulação, Medição
+#+end_center
+
+#+attr_latex: :booktabs t
+| *Critério*              | *Analítico*  | *Simulação*   | *Medição*         |
+|                       | *Modelagem*  |             |                 |
+|-----------------------+------------+-------------+-----------------|
+| 1. Fase do ciclo vida | Qualquer   | Qualquer    | Pós-protótipo   |
+| 2. Tempo necessário   | Pequeno    | Médio       | Variável        |
+| 3. Ferramentas        | Analistas  | Ling. Comp. | Instrumentação  |
+| 4. Precisão           | Baixa      | Moderada    | Variável        |
+| 5. Aval. de trade-off | Fácil      | Moderada    | Difícil         |
+| 6. Custo              | Pequeno    | Médio       | Alto            |
+| 7. Vendabilidade      | Baixa      | Média       | Alta            |
+
+A precisão é difícil de obter para qualquer técnica.
+
+* Consideração *Principal*: Fase do Ciclo de Vida
+
+#+attr_latex: :booktabs t
+| *Critério*              | *Analítico*  | *Simulação*   | *Medição*         |
+|                       | *Modelagem*  |             |                 |
+|-----------------------+------------+-------------+-----------------|
+| 1. Fase do ciclo vida | Qualquer   | Qualquer    | Pós-protótipo   |
+
+#+latex: \vfill
+
+*Modelagem Analítica* ou *Simulação*
+- Mais convincente se apoiada por medições anteriores
+
+* Consideração: Tempo Disponível
+
+Restrições de tempo influenciam fortemente a escolha da técnica
+#+attr_latex: :booktabs t
+| *Critério*              | *Analítico*  | *Simulação*   | *Medição*         |
+|                       | *Modelagem*  |             |                 |
+|-----------------------+------------+-------------+-----------------|
+| 2. Tempo necessário   | Pequeno    | Médio       | Variável        |
+
+#+latex: \vfill
+
+- Modelagem analítica
+  - Adequada quando os resultados são necessários "para ontem"
+- Simulações
+  - Simulações são tipicamente lentas
+- Medições
+  - Mais longa que a modelagem analítica, mas mais curta que simulações
+  - Duração altamente variável
+    - Lei de Murphy: se algo pode dar errado, dará
+
+* Consideração: Disponibilidade de Ferramentas
+
+#+attr_latex: :booktabs t
+| *Critério*              | *Analítico*  | *Simulação*   | *Medição*         |
+|                       | *Modelagem*  |             |                 |
+|-----------------------+------------+-------------+-----------------|
+| 3. Ferramentas        | Analistas  | Ling. Comp. | Instrumentação  |
+
+#+latex: \vfill
+
+- Ferramentas necessárias
+  - Modelagem analítica → habilidades de modelagem (ex.: teoria de filas)
+  - Simulação → conhecimento de linguagens e técnicas de simulação
+  - Medição → instrumentação
+
+#+latex: \vfill
+
+- Analistas diferem em expertise e preferências
+  - Muitos modeladores experientes evitam sistemas reais
+  - Outros preferem medição ou simulação por conhecimento limitado em modelagem
+  - Falta de expertise em simulação frequentemente impede seu uso
+#+latex: \pause
+- As ferramentas necessárias para simulação podem não existir
+
+* Consideração: Precisão
+
+#+attr_latex: :booktabs t
+| *Critério*              | *Analítico*  | *Simulação*   | *Medição*         |
+|                       | *Modelagem*  |             |                 |
+|-----------------------+------------+-------------+-----------------|
+| 4. Precisão           | Baixa      | Moderada    | Variável        |
+
+\to A precisão é difícil de obter para qualquer técnica.
+
+#+latex: \vfill
+
+*A precisão varia por técnica*
+  - Modelagem analítica → muitas suposições, frequentemente baixa precisão
+  - Simulação → mais detalhes, mais próxima da realidade
+  - Medição → pode variar de muito alta a zero (específica ao ambiente)
+
+#+latex: \vfill\pause
+  
+Precisão é diferente de Correção das conclusões
+- Risco de interpretação equivocada dos dados de desempenho
+
+* Consideração: Avaliação de Trade-offs (/Insights/)
+
+#+attr_latex: :booktabs t
+| *Critério*              | *Analítico*  | *Simulação*   | *Medição*         |
+|                       | *Modelagem*  |             |                 |
+|-----------------------+------------+-------------+-----------------|
+| 5. Aval. de trade-off | Fácil      | Moderada    | Difícil         |
+
+#+latex: \vfill
+
+Estudo de desempenho
+- Comparar alternativas
+- Encontrar o valor ótimo de parâmetros
+
+#+latex: \vfill\pause
+
+- Modelos analíticos → melhores para entender efeitos de parâmetros
+- Simulação → pode explorar o espaço de parâmetros, mas trade-offs pouco claros
+- Medição → menos desejável para encontrar o valor ótimo de parâmetros
+  - Resultados podem ser distorcidos por alguma mudança aleatória no ambiente
+
+* Consideração: Custo
+
+#+attr_latex: :booktabs t
+| *Critério*              | *Analítico*  | *Simulação*   | *Medição*         |
+|                       | *Modelagem*  |             |                 |
+|-----------------------+------------+-------------+-----------------|
+| 6. Custo              | Pequeno    | Médio       | Alto            |
+
+#+latex: \vfill
+
+- Modelagem analítica
+  - Apenas tempo do analista, papel e lápis
+
+- Simulação
+  - Útil para sistemas caros onde configurações devem ser alteradas virtualmente
+
+- Medição
+  - Requer equipamentos reais, instrumentos e tempo significativo
+
+* Consideração: Vendabilidade dos Resultados
+
+#+attr_latex: :booktabs t
+| *Critério*              | *Analítico*  | *Simulação*   | *Medição*         |
+|                       | *Modelagem*  |             |                 |
+|-----------------------+------------+-------------+-----------------|
+| 7. Vendabilidade      | Baixa      | Média       | Alta            |
+
+#+latex: \vfill
+
+- Medições
+  - A justificativa mais forte é a credibilidade
+  - Mais fácil convencer outros com dados reais
+
+#+latex: \vfill\pause
+
+- Resultados analíticos
+  - Frequentemente recebidos com ceticismo, pois métodos e resultados não são bem compreendidos
+  - Prática comum
+    - novas técnicas analíticas \to validar usando simulações ou medições reais
+
+* Considerações Finais: Validando e Combinando Técnicas
+
+#+begin_center
+Até que se prove culpada, toda pessoa deve ser presumida inocente.
+
+Até ser validado, todo resultado de avaliação é _suspeito_.
+#+end_center
+  
+#+latex: \pause\vfill
+
+Três regras de validação. Até ser validado por uma das outras duas técnicas
+1. Não confie nos resultados de um modelo analítico
+2. Não confie nos resultados de um modelo de simulação
+3. Não confie nos resultados de medições (a maioria ignora esta regra)
+#+latex: \pause
+
+Frequentemente é útil usar duas ou mais técnicas em conjunto
+- Simulação + Modelagem Analítica
+- Medições + Simulação
+#+latex: \pause\vfill
+
+Medições também estão sujeitas a erros e bugs
+- A intuição de especialistas é frequentemente usada como método de validação
+  - Resultados não devem ser contraintuitivos
+
+#+latex: \pause\vfill
+
+Técnicas podem ser usadas sequencialmente
+- Exemplo: modelo analítico define faixas de parâmetros → simulação refina
+- Benefício: menos execuções de simulação, uso mais eficiente dos recursos
+
+* Referências
+
+- Capítulo 3. Jain, Raj. The art of computer systems performance
+  analysis: techniques for experimental design, measurement,
+  simulation, and modeling. New York: John Wiley,
+  c1991. ISBN 0471503363.
