@@ -1,0 +1,941 @@
+# -*- coding: utf-8 -*-
+# -*- mode: org -*-
+#+startup: beamer overview indent
+#+LANGUAGE: pt-br
+#+TAGS: noexport(n)
+#+EXPORT_EXCLUDE_TAGS: noexport
+#+EXPORT_SELECT_TAGS: export
+
+#+Title: Análise de Desempenho de Sist. Comp.
+#+SubTitle: Modelos Lineares Múltiplos
+#+Author: Prof. Lucas Mello Schnorr
+#+Date: \copyleft
+
+#+LaTeX_CLASS: beamer
+#+LaTeX_CLASS_OPTIONS: [xcolor=dvipsnames,10pt]
+#+OPTIONS: H:1 num:t toc:nil \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+#+LATEX_HEADER: \input{org-babel.tex}
+
+* Código R das figuras                                             :noexport:
+
+As figuras desta aula são geradas a partir de =material/= com
+=Rscript aula25-modelos-lineares-pt-br-figs.R= (arquivo produzido pelo
+tangle deste .org). Os dados do =mmul= vêm de =a23_mmul_tempos.csv=
+(coletados para as aulas 23--24); os demais conjuntos são sintéticos.
+
+#+begin_src R :results none :exports none :tangle aula25-modelos-lineares-pt-br-figs.R
+suppressMessages(library(tidyverse))
+options(width = 70)
+tema <- theme_bw(base_size = 11)
+#+end_src
+
+#+begin_src R :results output graphics file :file pdf_babel/a25_rede.pdf :exports none :tangle aula25-modelos-lineares-pt-br-figs.R
+# Tempo de transferência (us) vs tamanho da mensagem (KiB) em duas redes:
+# tempo = latência + tamanho / banda  (latência e banda dependem da rede)
+set.seed(42)
+dr <- expand_grid(tamanho = seq(0, 64, 8),
+                  rede = c("Ethernet", "InfiniBand"), rep = 1:3) %>%
+  mutate(lat = ifelse(rede == "Ethernet", 50, 2),
+         bw  = ifelse(rede == "Ethernet", 1.2, 10),
+         tempo = lat + tamanho / bw + rnorm(n(), sd = 2),
+         rede = factor(rede))
+m.adit <- lm(tempo ~ tamanho + rede, dr)
+m.int  <- lm(tempo ~ tamanho * rede, dr)
+print(summary(m.adit)); print(summary(m.int))
+niveis <- c("tempo ~ tamanho + rede (aditivo)",
+            "tempo ~ tamanho * rede (com interação)")
+bind_rows(dr %>% mutate(modelo = "tempo ~ tamanho + rede (aditivo)",
+                        pred = predict(m.adit, dr)),
+          dr %>% mutate(modelo = "tempo ~ tamanho * rede (com interação)",
+                        pred = predict(m.int, dr))) %>%
+  ggplot(aes(x = tamanho, y = tempo, color = rede)) +
+  geom_point(alpha = .6) + geom_line(aes(y = pred), linewidth = 1) +
+  facet_wrap(~factor(modelo, levels = niveis)) + tema +
+  scale_color_brewer(palette = "Set1") +
+  labs(x = "Tamanho da mensagem (KiB)", y = "Tempo (us)", color = "Rede") +
+  theme(legend.position = "top") -> p
+ggsave("pdf_babel/a25_rede.pdf", p, width = 7, height = 3.4)
+#+end_src
+
+#+begin_src R :results output graphics file :file pdf_babel/a25_memcache.pdf :exports none :tangle aula25-modelos-lineares-pt-br-figs.R
+# 2^2 Memória (A) x Cache (B), Jain cap. 17
+d22 <- tribble(~xA, ~xB, ~y,
+               -1, -1, 15,
+               +1, -1, 45,
+               -1, +1, 25,
+               +1, +1, 75)
+m22 <- lm(y ~ xA * xB, d22); print(coef(m22))
+SST <- sum((d22$y - mean(d22$y))^2)
+print(4 * coef(m22)[-1]^2 / SST)
+d22 %>% mutate(Memoria = factor(xA, labels = c("4 MB (-1)", "16 MB (+1)")),
+               Cache = factor(xB, labels = c("1 KB (-1)", "75 KB (+1)"))) %>%
+  ggplot(aes(x = Memoria, y = y, color = Cache, group = Cache)) +
+  geom_point(size = 3) + geom_line(linewidth = 1) + tema +
+  scale_color_brewer(palette = "Set1") + ylim(0, NA) +
+  labs(x = "Memória (A)", y = "Desempenho (MIPS)", color = "Cache (B)") +
+  theme(legend.position = "top") -> p
+ggsave("pdf_babel/a25_memcache.pdf", p, width = 3.6, height = 3.4)
+# Versão com 3 réplicas por tratamento (erro experimental sintético)
+set.seed(25)
+d22r <- d22[rep(1:4, each = 3), ] %>% mutate(y = y + rnorm(n(), sd = 3))
+m22r <- lm(y ~ xA * xB, d22r)
+print(summary(m22r)); print(anova(m22r))
+#+end_src
+
+#+begin_src R :results output graphics file :file pdf_babel/a25_mmul_loglog.pdf :exports none :tangle aula25-modelos-lineares-pt-br-figs.R
+# Dados reais do mmul (aulas 23-24): n, rep, tempo (s)
+dm <- read_csv("a23_mmul_tempos.csv", show_col_types = FALSE) %>%
+  mutate(pot2 = (log2(n) %% 1 == 0))
+mm <- lm(log(tempo) ~ log(n), dm)
+print(summary(mm)); print(confint(mm))
+print(summary(lm(log(tempo) ~ log(n) + pot2, dm)))
+p1 <- ggplot(dm, aes(x = n, y = tempo)) + geom_point(alpha = .5) + tema +
+  labs(x = "n", y = "tempo (s)", title = "Escala linear")
+p2 <- ggplot(dm, aes(x = n, y = tempo)) + geom_point(alpha = .5) +
+  geom_smooth(method = "lm", formula = y ~ x, color = "red") +
+  scale_x_log10() + scale_y_log10() + tema +
+  labs(x = "n (escala log)", y = "tempo (s, escala log)",
+       title = "Escala log-log")
+pdf("pdf_babel/a25_mmul_loglog.pdf", width = 7, height = 3.2)
+gridExtra::grid.arrange(p1, p2, ncol = 2)
+dev.off()
+#+end_src
+
+#+begin_src R :results output graphics file :file pdf_babel/a25_hetero.pdf :exports none :tangle aula25-modelos-lineares-pt-br-figs.R
+# Exemplo de brinquedo (SMPE): variância cresce com x
+set.seed(77)
+x <- runif(50, 0, 60)
+dh <- data.frame(x = x, y = 3 + x^2/60 + x * rnorm(50, sd = .3))
+mh  <- lm(y ~ x + I(x^2), dh)
+mhw <- lm(y ~ x + I(x^2), dh, weights = 1/x^2)
+print(summary(mh)$coef); print(summary(mhw)$coef)
+dh$pred <- predict(mh); dh$res <- resid(mh)
+p1 <- ggplot(dh, aes(x, y)) + geom_point() +
+  geom_line(aes(y = pred), color = "red") + tema +
+  labs(title = "y ~ x + I(x^2)")
+p2 <- ggplot(dh, aes(pred, res)) + geom_point() +
+  geom_hline(yintercept = 0, linetype = 2) + tema +
+  labs(x = "valor ajustado", y = "resíduo", title = "Resíduos: funil")
+pdf("pdf_babel/a25_hetero.pdf", width = 7, height = 3)
+gridExtra::grid.arrange(p1, p2, ncol = 2)
+dev.off()
+#+end_src
+
+#+begin_src R :results output graphics file :file pdf_babel/a25_overfit.pdf :exports none :tangle aula25-modelos-lineares-pt-br-figs.R
+# Sobreajuste: dados realmente lineares, polinômios de grau 1, 2 e 7
+set.seed(1)
+do <- tibble(x = 1:12, y = 2 + 0.5 * x + rnorm(12, sd = .6))
+graus <- c(1, 2, 7)
+ms <- map(graus, ~ lm(y ~ poly(x, .x), do))
+print(tibble(grau = graus,
+             R2   = map_dbl(ms, ~ summary(.x)$r.squared),
+             R2aj = map_dbl(ms, ~ summary(.x)$adj.r.squared),
+             AIC  = map_dbl(ms, AIC)))
+m1 <- lm(y ~ x, do); m7 <- lm(y ~ poly(x, 7), do); print(anova(m1, m7))
+xv <- seq(1, 12, length.out = 300)
+curvas <- map2_dfr(ms, graus, ~ tibble(x = xv, grau = paste("grau", .y),
+                                       y = predict(.x, tibble(x = xv))))
+p <- ggplot(do, aes(x, y)) + geom_point(size = 2) +
+  geom_line(data = curvas, aes(color = grau), linewidth = 1) + tema +
+  scale_color_brewer(palette = "Set1") + labs(color = NULL) +
+  theme(legend.position = "top")
+ggsave("pdf_babel/a25_overfit.pdf", p, width = 4.2, height = 3.4)
+#+end_src
+
+#+begin_src R :results output graphics file :file pdf_babel/a25_loess.pdf :exports none :tangle aula25-modelos-lineares-pt-br-figs.R
+# Quando nem polinômio serve: y = log(x) + ruído (SMPE)
+set.seed(42)
+dl <- tibble(x = runif(50, 0.5, 60), y = log(x) + rnorm(50, sd = .2))
+p <- ggplot(dl, aes(x, y)) + geom_point() +
+  stat_function(fun = log, aes(linetype = "verdadeira: log(x)")) +
+  geom_smooth(method = "lm", formula = y ~ x + I(x^2), se = FALSE,
+              aes(color = "lm: y ~ x + I(x^2)")) +
+  geom_smooth(method = "loess", formula = y ~ x,
+              aes(color = "loess"), fill = "lightblue") +
+  scale_color_manual(values = c("red", "blue")) + tema +
+  labs(color = NULL, linetype = NULL) + theme(legend.position = "top")
+ggsave("pdf_babel/a25_loess.pdf", p, width = 4.6, height = 3.4)
+#+end_src
+
+#+begin_src R :results output graphics file :file pdf_babel/a25_compilador.pdf :exports none :tangle aula25-modelos-lineares-pt-br-figs.R
+# Exemplo integrador (sintético): tempo ~ n x flag de compilação
+set.seed(1)
+dc <- expand_grid(n = seq(200, 1200, 100), flag = c("O0", "O2", "O3"),
+                  rep = 1:5) %>%
+  mutate(k = c(O0 = 1, O2 = 0.35, O3 = 0.30)[flag],
+         tempo = k * 4e-9 * n^3 * exp(rnorm(n(), sd = .05)),
+         flag = factor(flag))
+mc.int <- lm(log(tempo) ~ log(n) * flag, dc)
+mc.adt <- lm(log(tempo) ~ log(n) + flag, dc)
+print(anova(mc.adt, mc.int)); print(AIC(mc.adt, mc.int))
+print(summary(mc.adt)); print(exp(coef(mc.adt)[3:4]))
+p1 <- ggplot(dc, aes(n, tempo, color = flag)) + geom_point(alpha = .6) +
+  tema + scale_color_brewer(palette = "Set1") +
+  labs(y = "tempo (s)", title = "Escala linear") +
+  theme(legend.position = "top")
+p2 <- ggplot(dc, aes(n, tempo, color = flag)) + geom_point(alpha = .6) +
+  geom_smooth(method = "lm", formula = y ~ x, se = FALSE) +
+  scale_x_log10() + scale_y_log10() + tema +
+  scale_color_brewer(palette = "Set1") +
+  labs(y = "tempo (s)", title = "Escala log-log") +
+  theme(legend.position = "top")
+pdf("pdf_babel/a25_compilador.pdf", width = 7, height = 3.2)
+gridExtra::grid.arrange(p1, p2, ncol = 2)
+dev.off()
+#+end_src
+
+* Onde estamos
+
+Aulas 23 e 24: regressão linear *simples*
+- \( y = b_0 + b_1 x + \varepsilon \), mínimos quadrados
+- Hipóteses, resíduos, \( R^2 \), ICs e intervalos de predição
+- Exemplo condutor: tempo do =mmul= em função de \( n \)
+
+#+latex: \vfill\pause
+
+Mas o desempenho raramente depende de *um único* fator
+- Tamanho da entrada *e* número de threads *e* compilador *e* ...
+- Fatores numéricos e categóricos misturados
+- Efeitos que se combinam (interações) ou se multiplicam
+
+#+latex: \vfill\pause
+
+** Hoje                                                            :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+- Regressão múltipla, fórmulas em R, preditores categóricos, interações
+- O projeto 2^k visto como uma regressão
+- Transformações (log), heterocedasticidade, polinômios, parcimônia, LOESS
+
+* Do simples ao múltiplo
+
+Regressão linear múltipla com \( k \) variáveis explicativas:
+\[
+y_i = b_0 + b_1 x_{1i} + b_2 x_{2i} + \dots + b_k x_{ki} + \varepsilon_i
+\]
+
+#+latex: \vfill\pause
+
+- \( b_j \): variação esperada de \( y \) quando \( x_j \) aumenta 1
+  unidade, *mantidas as demais variáveis fixas*
+- Mesmas hipóteses da regressão simples sobre \( \varepsilon \):
+  média zero, variância constante, independência, (normalidade)
+- Os \( b_j \) continuam sendo estimados por *mínimos quadrados*
+
+#+latex: \vfill\pause
+
+Exemplo (inspirado em Jain, cap. 15): tempo de CPU de um programa
+\[ \mathrm{CPU} = b_0 + b_1\, (\text{nº de E/S de disco}) + b_2\, (\text{tamanho de memória}) + \varepsilon \]
+
+* Forma matricial (só a ideia)
+
+Com \( n \) observações e \( k \) variáveis:
+#+begin_export latex
+\[
+\underbrace{\begin{pmatrix} y_1\\ y_2\\ \vdots\\ y_n \end{pmatrix}}_{y}
+=
+\underbrace{\begin{pmatrix}
+1 & x_{11} & \cdots & x_{k1}\\
+1 & x_{12} & \cdots & x_{k2}\\
+\vdots & \vdots & & \vdots\\
+1 & x_{1n} & \cdots & x_{kn}
+\end{pmatrix}}_{X \;(n \times (k+1))}
+\underbrace{\begin{pmatrix} b_0\\ b_1\\ \vdots\\ b_k \end{pmatrix}}_{\beta}
++
+\underbrace{\begin{pmatrix} \varepsilon_1\\ \vdots\\ \varepsilon_n \end{pmatrix}}_{\varepsilon}
+\]
+#+end_export
+
+#+latex: \vfill\pause
+
+Minimizar \( \sum e_i^2 = (y - X\beta)^\top (y - X\beta) \) leva a
+\[
+\hat\beta = (X^\top X)^{-1} X^\top y
+\]
+
+#+latex: \vfill\pause
+
+- Cada coluna de \( X \) é um ``regressor'' (pode ser \( x \), \( x^2 \), \( \log x \), um indicador 0/1, um produto \( x_1 x_2 \), ...)
+- Exige \( X^\top X \) invertível: colunas não podem ser
+  (quase) combinações lineares umas das outras
+- Na prática: =lm()= monta \( X \) a partir da *fórmula* e resolve
+
+* ``Linear'' quer dizer linear nos *parâmetros*
+
+O modelo é linear se \( y \) é uma combinação linear dos \( b_j \):
+\[
+y = b_0 + b_1 x + b_2 \frac{1}{x} + b_3 x^3 + \varepsilon
+\qquad \text{é linear!}
+\]
+
+#+latex: \vfill\pause
+
+\[
+y = b_0 + b_1 \log n + b_2\, x_1 x_2 + \varepsilon
+\qquad \text{também é linear}
+\]
+
+#+latex: \vfill\pause
+
+\[
+y = b_0 + e^{b_1 x} + \varepsilon
+\qquad \text{não é linear (em } b_1\text{)}
+\]
+
+#+latex: \vfill\pause
+
+- Mesmo que o fenômeno não seja linear, o modelo linear é uma
+  excelente *primeira aproximação*
+- Pergunte-se sempre: *existe um jeito de olhar o problema em que ele
+  fique linear?* (transformações, novos regressores)
+
+* Fórmulas em R
+
+=resposta ~ explicativas= (\( \sim \) lê-se ``modelada em função de'')
+
+#+latex: \medskip
+
+Os símbolos *não* têm o significado aritmético usual:
+
+#+latex: {\small
+| Fórmula                | Modelo                                                       |
+|------------------------+--------------------------------------------------------------|
+| =y ~ x=                | \( b_0 + b_1 x \)                                            |
+| =y ~ x1 + x2=          | \( b_0 + b_1 x_1 + b_2 x_2 \)                                |
+| =y ~ x1 * x2=          | \( b_0 + b_1 x_1 + b_2 x_2 + b_3 x_1 x_2 \)                  |
+| =y ~ x1 + x1:x2=       | \( b_0 + b_1 x_1 + b_3 x_1 x_2 \) (=:= só a interação)       |
+| =y ~ (a + b + c)^2=    | efeitos principais + todas as interações duplas              |
+| =y ~ x - 1=            | \( b_1 x \) (sem intercepto)                                 |
+| =y ~ x + I(x^2)=       | \( b_0 + b_1 x + b_2 x^2 \) (=I()= protege a aritmética)     |
+| =y ~ poly(x, 2)=       | idem, com polinômios ortogonais                              |
+| =y ~ factor(f)=        | um coeficiente por nível de =f= (menos a referência)         |
+| =log(y) ~ log(x)=      | \( \log y = b_0 + b_1 \log x \)                              |
+#+latex: }
+
+* Fórmulas em R: na prática
+
+#+begin_src R :exports code
+m <- lm(tempo ~ n * threads, data = df)  # ajusta
+summary(m)        # coeficientes, erros-padrão, R², R² ajustado
+confint(m)        # ICs dos coeficientes
+anova(m)          # tabela de alocação de variação
+model.matrix(m)   # a matriz X que o R montou
+predict(m, newdata = novos, interval = "prediction")
+par(mfrow = c(2, 2)); plot(m)   # diagnóstico dos resíduos
+#+end_src
+
+#+latex: \vfill\pause
+
+- =model.matrix()= é ótimo para entender o que uma fórmula faz
+- Tudo o que vimos nas aulas 23--24 (resíduos, qqplot, ICs,
+  predição) vale igualmente aqui
+
+* Preditores categóricos: variáveis indicadoras
+
+E se um fator não é numérico? (rede, compilador, algoritmo, SO, ...)
+
+#+latex: \vfill\pause
+
+Codificamos com *variáveis indicadoras* (/dummy/), valendo 0 ou 1
+- Um fator com \( m \) níveis \( \Rightarrow \) \( m - 1 \) indicadoras
+- O nível que fica de fora é o *nível de referência* (absorvido em \( b_0 \))
+
+#+latex: \vfill\pause
+
+Exemplo: tempo de transferência de mensagens em duas redes
+\[
+\mathrm{tempo} = b_0 + b_1\,\mathrm{tamanho} + b_2\, x_{\mathrm{IB}} + \varepsilon,
+\qquad
+x_{\mathrm{IB}} = \begin{cases} 1 & \text{se InfiniBand} \\ 0 & \text{se Ethernet} \end{cases}
+\]
+
+#+latex: \vfill\pause
+
+- \( b_2 \): diferença *Infiniband -- Ethernet*, para o mesmo tamanho
+- Com 3 níveis (=O0=, =O2=, =O3=): \( x_{O2}, x_{O3} \), referência =O0=
+
+#+latex: \pause
+
+** Cuidado                                                         :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+Não codifique níveis como 1, 2, 3, ...: isso impõe uma ordem e
+espaçamento que não existem. Use =factor()=.
+
+* Preditores categóricos em R
+
+#+begin_src R :exports code
+df$rede <- factor(df$rede)        # níveis: Ethernet, InfiniBand
+levels(df$rede)                   # o 1o nível é a referência
+df$rede <- relevel(df$rede, ref = "InfiniBand")  # trocar referência
+model.matrix(~ tamanho + rede, df)[c(1, 4, 7), ]
+#+end_src
+
+#+begin_src text :exports code
+  (Intercept) tamanho redeInfiniBand
+1           1       0              0
+4           1       0              1
+7           1       8              0
+#+end_src
+
+#+latex: \vfill\pause
+
+- O R cria as indicadoras automaticamente (contrastes de tratamento)
+- Os coeficientes aparecem como =redeInfiniBand=, =flagO2=, =flagO3= ...
+- Cada um é lido como *diferença em relação ao nível de referência*
+
+* Interações
+
+Há *interação* entre dois fatores quando o efeito de um depende do
+nível do outro (Jain, cap. 16)
+
+#+latex: \vfill\pause
+
+Modelo aditivo (sem interação):
+\[
+\mathrm{tempo} = b_0 + b_1\,\mathrm{tamanho} + b_2\, x_{\mathrm{IB}}
+\]
+- Retas *paralelas*: mesma inclinação (banda) nas duas redes
+
+#+latex: \vfill\pause
+
+Modelo com interação (=tempo ~ tamanho * rede=):
+\[
+\mathrm{tempo} = b_0 + b_1\,\mathrm{tamanho} + b_2\, x_{\mathrm{IB}} + b_3\,\mathrm{tamanho}\cdot x_{\mathrm{IB}}
+\]
+- Ethernet: intercepto \( b_0 \), inclinação \( b_1 \)
+- InfiniBand: intercepto \( b_0 + b_2 \), inclinação \( b_1 + b_3 \)
+
+#+latex: \vfill\pause
+
+Interpretação física: intercepto \( \approx \) *latência*,
+inclinação \( \approx 1/\text{banda} \) --- é natural que *ambos*
+mudem com a rede
+
+* Interações no gráfico
+
+#+attr_latex: :width \linewidth
+[[file:pdf_babel/a25_rede.pdf]]
+
+- Retas não paralelas no gráfico \( \Rightarrow \) suspeite de interação
+- O modelo aditivo força o paralelismo e erra sistematicamente
+  (resíduos com padrão)
+
+* Interações: o =summary=
+
+#+begin_src R :exports code
+summary(lm(tempo ~ tamanho * rede, data = dr))
+#+end_src
+
+#+begin_src text :exports code
+                       Estimate Std. Error t value Pr(>|t|)
+(Intercept)             50.7815     0.8209   61.86   <2e-16 ***
+tamanho                  0.8088     0.0216   37.53   <2e-16 ***
+redeInfiniBand         -48.6863     1.1609  -41.94   <2e-16 ***
+tamanho:redeInfiniBand  -0.7117     0.0305  -23.35   <2e-16 ***
+Residual standard error: 2.313 on 50 degrees of freedom
+Multiple R-squared:  0.9965,	Adjusted R-squared:  0.9963
+#+end_src
+
+#+latex: \vfill\pause
+
+- Ethernet: latência \( \approx 50{,}8\,\mu s \), \( 0{,}81\,\mu s/\mathrm{KiB} \) (\( \approx 1{,}2 \) GB/s)
+- InfiniBand: latência \( \approx 50{,}8 - 48{,}7 = 2{,}1\,\mu s \),
+  \( 0{,}81 - 0{,}71 = 0{,}10\,\mu s/\mathrm{KiB} \) (\( \approx 10 \) GB/s)
+- A interação é altamente significativa: o aditivo é inadequado
+
+#+latex: \vfill\pause
+
+*Regra:* se a interação está no modelo, mantenha também os efeitos
+principais correspondentes (princípio da hierarquia)
+
+* O projeto 2^k é uma regressão!
+
+Lembra do 2² Memória (A) \( \times \) Cache (B)? (Jain, cap. 17)
+
+#+latex: \begin{columns}\begin{column}{.55\linewidth}
+
+#+latex: {\small
+| Memória | Cache | \( x_A \) | \( x_B \) | \( y \) (MIPS) |
+|---------+-------+-----------+-----------+----------------|
+| 4 MB    | 1 KB  |        -1 |        -1 |             15 |
+| 16 MB   | 1 KB  |        +1 |        -1 |             45 |
+| 4 MB    | 75 KB |        -1 |        +1 |             25 |
+| 16 MB   | 75 KB |        +1 |        +1 |             75 |
+#+latex: }
+
+#+latex: \medskip
+
+Codificação \( \pm 1 \) (nível baixo/alto):
+\[
+y = q_0 + q_A x_A + q_B x_B + q_{AB}\, x_A x_B
+\]
+É um modelo linear com 4 regressores: \( 1, x_A, x_B, x_A x_B \)
+
+#+latex: \end{column}\begin{column}{.43\linewidth}
+#+attr_latex: :width \linewidth
+[[file:pdf_babel/a25_memcache.pdf]]
+#+latex: \end{column}\end{columns}
+
+* 2^k com =lm()=
+
+#+begin_src R :exports code
+d22 <- data.frame(xA = c(-1, +1, -1, +1),
+                  xB = c(-1, -1, +1, +1),
+                  y  = c(15, 45, 25, 75))
+coef(lm(y ~ xA * xB, data = d22))
+#+end_src
+
+#+begin_src text :exports code
+(Intercept)          xA          xB       xA:xB
+         40          20          10           5
+#+end_src
+
+#+latex: \vfill\pause
+
+Exatamente os efeitos do método da tabela de sinais:
+\( y = 40 + 20\,x_A + 10\,x_B + 5\,x_A x_B \)
+
+#+latex: \vfill\pause
+
+Por quê? Com \( \pm 1 \), as colunas de \( X \) são *ortogonais*:
+\[
+X^\top X = 4 I \quad\Rightarrow\quad \hat\beta = \tfrac{1}{4} X^\top y
+\]
+- \( q_A = \frac{1}{4}(-15 + 45 - 25 + 75) = 20 \): a ``tabela de
+  sinais'' é apenas \( X^\top y / 2^k \)
+- Ortogonalidade: as estimativas de cada efeito *não dependem* de quais
+  outros termos estão no modelo
+
+* Alocação de variação (\( \approx \) ANOVA) em um slide
+
+Variação total: \( SST = \sum_i (y_i - \bar y)^2 \).
+No 2^k, cada efeito explica \( 2^k q_j^2 \):
+\[
+SST = 2^2 q_A^2 + 2^2 q_B^2 + 2^2 q_{AB}^2 = 1600 + 400 + 100 = 2100
+\]
+
+#+latex: \vfill\pause
+
+| Efeito   | SS   | Fração explicada |
+|----------+------+------------------|
+| A (Mem.) | 1600 | 76%              |
+| B (Cache)| 400  | 19%              |
+| AB       | 100  | 5%               |
+
+#+latex: \vfill\pause
+
+- É a coluna =Sum Sq= de =anova(lm(y ~ xA * xB))=
+- Sem réplicas: 4 observações, 4 parâmetros \( \Rightarrow \) 0 graus
+  de liberdade para o erro, nenhum teste possível
+- Com \( r \) réplicas: \( SST = SSA + SSB + SSAB + SSE \), e o
+  =anova= testa cada efeito contra o erro experimental
+
+* 2² com réplicas: erro experimental
+
+3 réplicas por tratamento (ruído sintético, \( \sigma = 3 \)):
+
+#+begin_src R :exports code
+anova(lm(y ~ xA * xB, data = d22r))
+#+end_src
+
+#+begin_src text :exports code
+          Df Sum Sq Mean Sq F value    Pr(>F)
+xA         1 4253.9  4253.9 728.983 3.813e-09 ***
+xB         1 1402.9  1402.9 240.417 2.980e-07 ***
+xA:xB      1  141.7   141.7  24.288  0.001152 **
+Residuals  8   46.7     5.8
+#+end_src
+
+#+latex: \vfill\pause
+
+- Coeficientes estimados: \( 38{,}8 + 18{,}8\,x_A + 10{,}8\,x_B + 3{,}4\,x_A x_B \)
+  (erro-padrão 0,70 para todos --- ortogonalidade!)
+- A interação explica pouco (\( \approx 2\% \)), mas é distinguível do ruído
+- Projeto de experimentos e regressão são *o mesmo ferramental*;
+  o DoE escolhe \( X \) de forma inteligente (aula 9)
+
+* Transformações: efeitos multiplicativos
+
+Muitos fenômenos de desempenho são *multiplicativos*, não aditivos
+- Complexidade: \( t = a\, n^k \)
+- ``O compilador X é 2× mais rápido'', ``a cache reduz o tempo em 30%''
+- O erro de medição costuma ser *relativo* (\( \pm 5\% \)), não absoluto
+
+#+latex: \vfill\pause
+
+Aplicando \( \log \) dos dois lados:
+\[
+t = a\, n^k \cdot \eta
+\quad\Longrightarrow\quad
+\log t = \underbrace{\log a}_{b_0} + \underbrace{k}_{b_1} \log n + \underbrace{\log \eta}_{\varepsilon}
+\]
+
+#+latex: \vfill\pause
+
+- Lei de potência vira reta no gráfico log-log; a *inclinação* é o expoente
+- Ruído multiplicativo vira ruído aditivo de variância constante
+- Em R: =lm(log(tempo) ~ log(n))=
+
+#+latex: \pause
+
+** Outras transformações comuns (Jain, cap. 15)                    :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+\( y = a\,b^x \Rightarrow \log y \) linear em \( x \);
+\( y = a + b/x \Rightarrow \) regressor \( 1/x \);
+contagens \( \Rightarrow \sqrt{y} \);
+família de Box-Cox \( (y^\lambda - 1)/\lambda \)
+
+* Exemplo real: o =mmul= em escala log-log
+
+190 execuções do =mmul.c= (=-O2=, bloco 32), \( n = 128, \dots, 1280 \),
+10 réplicas em ordem aleatória (dados das aulas 23--24)
+
+#+attr_latex: :width \linewidth
+[[file:pdf_babel/a25_mmul_loglog.pdf]]
+
+- Escala linear: curva convexa, dispersão que *cresce* com \( n \)
+- Escala log-log: aproximadamente uma reta, dispersão mais uniforme
+
+* =mmul=: estimando o expoente
+
+#+begin_src R :exports code
+m <- lm(log(tempo) ~ log(n), data = dm); summary(m); confint(m)
+#+end_src
+
+#+begin_src text :exports code
+             Estimate Std. Error t value Pr(>|t|)
+(Intercept) -17.52140    0.21323  -82.17   <2e-16 ***
+log(n)        2.41599    0.03322   72.73   <2e-16 ***
+Residual standard error: 0.294 on 188 degrees of freedom
+Multiple R-squared:  0.9657,	Adjusted R-squared:  0.9655
+                2.5 %     97.5 %
+log(n)        2.35046   2.481515
+#+end_src
+
+#+latex: \vfill\pause
+
+- \( \hat k \approx 2{,}42 \), IC 95% \( [2{,}35;\ 2{,}48] \): *não*
+  contém o 3 ``teórico'' do algoritmo \( O(n^3) \)!
+- Nessa faixa de \( n \), custos fixos e \( O(n^2) \) (lançar o
+  processo, alocar e inicializar matrizes) e efeitos de cache pesam
+- \( \hat a = e^{-17{,}5} \): só tem sentido junto com a unidade (s)
+
+#+latex: \vfill\pause
+
+O modelo de potência é um *resumo empírico* para a faixa medida ---
+extrapolar para \( n = 10\,000 \) seria arriscado
+
+* =mmul=: uma indicadora com dados reais
+
+Matrizes com \( n \) potência de 2 (128, 256, 512, 1024) causam
+conflitos na cache? Indicadora =pot2=:
+
+#+begin_src R :exports code
+dm$pot2 <- (log2(dm$n) %% 1 == 0)
+summary(lm(log(tempo) ~ log(n) + pot2, data = dm))
+#+end_src
+
+#+begin_src text :exports code
+            Estimate Std. Error t value Pr(>|t|)
+(Intercept) -17.9175     0.2286  -78.38  < 2e-16 ***
+log(n)        2.4709     0.0349   70.82  < 2e-16 ***
+pot2TRUE      0.2169     0.0549    3.95  0.00011 ***
+#+end_src
+
+#+latex: \vfill\pause
+
+- Em escala log, os coeficientes são *multiplicativos*:
+  \( e^{0{,}217} \approx 1{,}24 \) \( \Rightarrow \) potências de 2 são
+  \( \approx 24\% \) mais lentas, a \( n \) igual
+- Retransformar: \( e^{\widehat{\log t}} \) estima a *mediana* /
+  média geométrica, não a média aritmética de \( t \)
+
+* Heterocedasticidade
+
+Hipótese da regressão: \( \mathrm{Var}(\varepsilon_i) = \sigma^2 \) constante.
+Exemplo de brinquedo: \( y = 3 + x^2/60 + x \cdot \mathcal{N}(0; 0{,}3^2) \)
+
+#+attr_latex: :width \linewidth
+[[file:pdf_babel/a25_hetero.pdf]]
+
+- O ``funil'' nos resíduos denuncia variância crescente
+- Estimativas continuam não viesadas, mas erros-padrão, ICs e
+  p-valores ficam *errados*; pontos ruidosos dominam o ajuste
+
+* Heterocedasticidade: o que fazer?
+
+- *Transformar a resposta*: \( \log y \) ou \( \sqrt{y} \) quando o
+  desvio cresce com a média (caso do =mmul=)
+
+#+latex: \vfill\pause
+
+- *Ponderar* (mínimos quadrados ponderados): peso \( \propto 1/\mathrm{Var}(\varepsilon_i) \)
+#+begin_src R :exports code
+lm(y ~ x + I(x^2), data = dh)                     # x^2: 0.0173 (EP 0.0057)
+lm(y ~ x + I(x^2), data = dh, weights = 1 / x^2)  # x^2: 0.0131 (EP 0.0025)
+#+end_src
+
+#+latex: \vfill\pause
+
+- *Replicar mais onde há mais variabilidade* e usar as médias
+  - Só espalhar mais pontos distintos na região ruidosa *não* resolve
+    (exemplo do SMPE: o \( R^2 \) piora)
+  - Réplicas no mesmo ponto + média reduzem a variância *daquele* ponto
+
+#+latex: \vfill\pause
+
+- Às vezes a heterocedasticidade indica um *fator esquecido*
+  (ex.: duas máquinas misturadas, frequência variável do processador)
+
+* Regressão polinomial
+
+Quando a relação é curva, podemos acrescentar potências de \( x \):
+#+begin_src R :exports code
+lm(y ~ x + I(x^2), data = df)   # coeficientes "crus"
+lm(y ~ poly(x, 2), data = df)   # polinômios ortogonais: mesmo ajuste
+#+end_src
+
+#+latex: \vfill\pause
+
+- Ainda é um modelo *linear* (nos parâmetros)
+- \( x \) e \( x^2 \) são muito correlacionados; =poly()= gera colunas
+  ortogonais \( \Rightarrow \) estimativas mais estáveis
+- Mas: quanto maior o grau, maior a tentação...
+
+#+latex: \vfill\pause
+
+** Jain (cap. 15): regressão curvilínea                            :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+Prefira um modelo derivado do conhecimento do sistema (ex.: latência
+mais tamanho/banda; \( a\, n^3 \)) a um polinômio de grau alto escolhido
+``porque ajusta melhor''
+
+* Sobreajuste (/overfitting/)
+
+12 pontos de uma relação *linear* + ruído, ajustados com graus 1, 2 e 7:
+
+#+latex: \begin{columns}\begin{column}{.55\linewidth}
+#+attr_latex: :width \linewidth
+[[file:pdf_babel/a25_overfit.pdf]]
+#+latex: \end{column}\begin{column}{.43\linewidth}
+#+latex: {\small
+| grau | \( R^2 \) | \( R^2_{aj} \) |  AIC |
+|------+-----------+----------------+------|
+|    1 |     0,951 |          0,946 | 19,9 |
+|    2 |     0,952 |          0,941 | 21,7 |
+|    7 |     0,960 |          0,889 | 29,6 |
+#+latex: }
+
+#+latex: \medskip
+
+- \( R^2 \) *sempre* aumenta com mais termos
+- O grau 7 ``persegue'' o ruído: interpola mal entre os pontos e
+  extrapola de forma absurda
+#+latex: \end{column}\end{columns}
+
+* Parcimônia
+
+Princípio atribuído a Guilherme de Ockham (séc. XIV):
+
+#+begin_quote
+Dentre explicações igualmente boas para um fenômeno, prefira a mais simples.
+#+end_quote
+
+#+latex: \vfill\pause
+
+- Modelos devem ter *o menor número de parâmetros possível*
+- Prefira modelos lineares a não lineares
+- Simplifique o modelo até ele ser *minimamente adequado*: um termo só
+  fica se removê-lo piora significativamente o ajuste
+
+#+latex: \vfill\pause
+
+#+begin_quote
+Um modelo deve ser tão simples quanto possível, mas não mais simples.
+\hfill --- atribuída a A. Einstein
+#+end_quote
+
+#+latex: \vfill\pause
+
+Parcimônia também no experimento: em vez de =y ~ (A+B+C)^2= com
+efeitos fracos, ajuste =y ~ A + B:C= se a análise apontar só esses termos
+(menos parâmetros \( \Rightarrow \) erros-padrão menores)
+
+* Comparando modelos
+
+\( R^2 \) ajustado: penaliza o número de parâmetros \( p \)
+\[
+R^2_{aj} = 1 - (1 - R^2)\,\frac{n - 1}{n - p - 1}
+\]
+
+#+latex: \vfill\pause
+
+AIC (critério de informação de Akaike): \( -2\log L + 2p \),
+*menor é melhor*; =AIC(m1, m2)=
+
+#+latex: \vfill\pause
+
+Teste F entre modelos *aninhados* (um é caso particular do outro):
+#+begin_src R :exports code
+m1 <- lm(y ~ x, data = do); m7 <- lm(y ~ poly(x, 7), data = do)
+anova(m1, m7)
+#+end_src
+
+#+begin_src text :exports code
+  Res.Df    RSS Df Sum of Sq      F Pr(>F)
+1     10 2.2318
+2      4 1.8416  6   0.39018 0.1412 0.9814
+#+end_src
+
+- \( p = 0{,}98 \): os 6 termos extras não melhoram nada \( \Rightarrow \) fique com =m1=
+
+* Multicolinearidade (brevemente)
+
+Quando duas (ou mais) variáveis explicativas são muito correlacionadas
+- Ex.: \( n \) e \( n^2 \); nº de instruções e nº de acessos à memória;
+  tamanho do problema e nº de processos num estudo de /weak scaling/
+
+#+latex: \vfill\pause
+
+Sintomas (Jain, cap. 15)
+- Erros-padrão grandes, coeficientes com sinais ``absurdos''
+- Modelo significativo como um todo (teste F), mas nenhum
+  coeficiente individualmente significativo
+- Estimativas mudam muito ao incluir/remover uma variável
+
+#+latex: \vfill\pause
+
+O que fazer
+- Verificar =cor()= entre pares de preditores antes de ajustar
+- Remover uma das variáveis redundantes, ou combiná-las
+- Polinômios: usar =poly()= ou centrar \( x \)
+- *Melhor ainda:* projetar o experimento com fatores ortogonais (2^k!)
+
+* Quando nada linear serve: LOESS
+
+#+latex: \begin{columns}\begin{column}{.58\linewidth}
+#+attr_latex: :width \linewidth
+[[file:pdf_babel/a25_loess.pdf]]
+#+latex: \end{column}\begin{column}{.40\linewidth}
+\( y = \log x + \) ruído
+- O quadrático (vermelho) erra nas extremidades
+- \alert{LO}cal regr\alert{ESS}ion: ajusta retas/parábolas *locais*, ponderadas pela
+  vizinhança de cada ponto
+#+latex: \end{column}\end{columns}
+
+#+begin_src R :exports code
+ggplot(df, aes(x, y)) + geom_point() +
+  geom_smooth(method = "loess")   # padrão do geom_smooth com n < 1000
+#+end_src
+
+- Ferramenta *exploratória*: revela a forma (há um ótimo? um platô?)
+- Estimador muito viesado, sem equação interpretável
+- Use-a para *escolher* um modelo paramétrico, não para concluir
+
+* Exemplo integrador: tamanho \( \times \) compilador
+
+=mmul= com três flags (=-O0=, =-O2=, =-O3=), \( n = 200, \dots, 1200 \),
+5 réplicas (dados *sintéticos*, ruído relativo de 5%)
+
+#+attr_latex: :width .9\linewidth
+[[file:pdf_babel/a25_compilador.pdf]]
+
+- Linear: curvas que se abrem em leque (multiplicativo + heterocedástico)
+- Log-log: retas aparentemente *paralelas* \( \Rightarrow \) mesmo
+  expoente, constantes diferentes
+
+* Exemplo integrador: escolhendo o modelo
+
+Interação permite um expoente por flag; o aditivo, um expoente comum:
+#+begin_src R :exports code
+m.int <- lm(log(tempo) ~ log(n) * flag, data = dc)
+m.adt <- lm(log(tempo) ~ log(n) + flag, data = dc)
+anova(m.adt, m.int); AIC(m.adt, m.int)
+#+end_src
+
+#+begin_src text :exports code
+  Res.Df     RSS Df Sum of Sq      F Pr(>F)
+1    161 0.32910
+2    159 0.32712  2 0.0019835 0.4821 0.6184
+      df       AIC
+m.adt  5 -547.6112
+m.int  7 -544.6087
+#+end_src
+
+#+latex: \vfill\pause
+
+- Interação não significativa (\( p = 0{,}62 \)) e AIC menor para o
+  aditivo \( \Rightarrow \) por parcimônia, ficamos com =m.adt=
+- Ou seja: a flag muda a *constante*, não a *complexidade*
+
+* Exemplo integrador: interpretação
+
+#+begin_src text :exports code
+            Estimate Std. Error t value Pr(>|t|)
+(Intercept) -19.2721     0.0420  -459.1   <2e-16 ***
+log(n)        2.9914     0.0065   462.5   <2e-16 ***
+flagO2       -1.0630     0.0086  -123.3   <2e-16 ***
+flagO3       -1.2176     0.0086  -141.2   <2e-16 ***
+Residual standard error: 0.04521 on 161 degrees of freedom
+Adjusted R-squared:  0.9993
+#+end_src
+
+#+latex: \vfill\pause
+
+#+begin_export latex
+\[
+\widehat{\log t} = -19{,}27 + 2{,}99 \log n - 1{,}06\, x_{O2} - 1{,}22\, x_{O3}
+\;\Longrightarrow\;
+\hat t = e^{-19{,}27}\, n^{2{,}99} \times
+\begin{cases} 1 & \text{-O0}\\ 0{,}35 & \text{-O2}\\ 0{,}30 & \text{-O3} \end{cases}
+\]
+#+end_export
+
+#+latex: \vfill\pause
+
+- Expoente \( \approx 3 \) (dados sintéticos gerados com \( n^3 \))
+- =-O2= é \( 1/e^{-1{,}06} \approx 2{,}9\times \) mais rápido que =-O0=;
+  =-O3= ganha mais \( \approx 17\% \) sobre =-O2= (\( e^{1{,}22 - 1{,}06} \))
+- Falta: diagnóstico (=plot(m.adt)=) e checar a significância de
+  =-O3= vs =-O2= (=relevel()= para mudar a referência)
+
+* Resumo
+
+- =lm()= + fórmulas cobrem muito: variáveis numéricas, categóricas
+  (indicadoras), interações, polinômios e transformações
+- Coeficientes são lidos *mantendo os demais fixos*; com indicadoras,
+  como diferença ao nível de referência; em log, como *razões*
+- O 2^k é uma regressão com colunas \( \pm 1 \) ortogonais; a
+  alocação de variação é a ANOVA dessa regressão
+- Efeitos multiplicativos e leis de potência \( \Rightarrow \) log-log
+- Heterocedasticidade: transformar, ponderar, replicar
+- \( R^2 \) sempre sobe: compare com \( R^2_{aj} \), AIC, =anova(m1, m2)=;
+  prefira o modelo mais simples adequado
+- LOESS para *explorar* a forma; modelo paramétrico para *concluir*
+- E sempre: verifique os resíduos (aula 24)
+
+* Referências
+
+#+latex: {\small
+- Jain, Raj. /The Art of Computer Systems Performance Analysis:
+  Techniques for Experimental Design, Measurement, Simulation, and
+  Modeling/. Wiley, 1991. ISBN 0471503363.
+  - Cap. 15: Other Regression Models (regressão múltipla, preditores
+    categóricos, regressão curvilínea, transformações, /outliers/,
+    multicolinearidade)
+  - Cap. 16: Introduction to Experimental Design (interações)
+  - Cap. 17--18: 2^k Factorial Designs; 2^k r Factorial Designs with
+    Replications
+- Arnaud Legrand e Jean-Marc Vincent. /Scientific Methodology and
+  Performance Evaluation/ (SMPE): ``Linear Model'' e ``Design of
+  Experiments, part 2'' (/Model Investigation/).
+- Crawley, Michael J. /The R Book/. Wiley, 2007 (fórmulas de modelos e
+  parcimônia).
+#+latex: }
