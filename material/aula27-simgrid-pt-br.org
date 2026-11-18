@@ -1,0 +1,760 @@
+# -*- coding: utf-8 -*-
+# -*- mode: org -*-
+#+startup: beamer overview indent
+#+LANGUAGE: pt-br
+#+TAGS: noexport(n)
+#+EXPORT_EXCLUDE_TAGS: noexport
+#+EXPORT_SELECT_TAGS: export
+
+#+Title: Análise de Desempenho de Sist. Comp.
+#+SubTitle: SimGrid I: simulação de sistemas distribuídos
+#+Author: Prof. Lucas Mello Schnorr
+#+Date: \copyleft
+
+#+LaTeX_CLASS: beamer
+#+LaTeX_CLASS_OPTIONS: [xcolor=dvipsnames,10pt]
+#+OPTIONS: H:1 num:t toc:nil \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+#+LATEX_HEADER: \input{org-babel.tex}
+
+* Por que simular sistemas distribuídos?
+
+Aula passada: simulação de eventos discretos (DES), transiente, réplicas,
+ICs. Hoje: *simular a execução de aplicações distribuídas/paralelas*.
+
+#+latex: \vfill\pause
+
+- *Custo*: um cluster de milhares de nós (ou uma nuvem) é caro e
+  compartilhado; experimentar \neq{} produzir
+- *Reprodutibilidade*: a plataforma real muda (carga, temperatura,
+  atualizações); na simulação, o mesmo cenário dá o mesmo resultado
+- *Escala*: estudar \(10^4\)--\(10^6\) processos em uma estação de trabalho
+- *Cenários inexistentes*: a máquina que ainda vai ser comprada, a rede
+  com o dobro de banda, falhas controladas
+- *Observabilidade*: tudo é visível (sem efeito de sonda)
+
+#+latex: \vfill\pause
+
+** Mas...                                                          :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+Um simulador só é útil se for *preciso* (próximo do real), *rápido*
+(muito mais rápido que o real) e *confiável* (verificado e validado).
+
+* Abordagens para estudar sistemas distribuídos
+
+#+ATTR_LATEX: :font \footnotesize
+| Abordagem        | Executa                        | Custo      | Realismo       |
+|------------------+--------------------------------+------------+----------------|
+| Experimento real | aplicação e plataforma reais   | alto       | total (+ ruído) |
+| Emulação         | aplicação real, plataforma "falsa" | médio/alto | alto           |
+| Simulação (DES)  | modelos de aplicação/plataforma | baixo      | depende do modelo |
+| Modelo analítico | fórmulas (filas, LogP, roofline) | mínimo    | grosseiro      |
+
+#+latex: \vfill\pause
+
+- *Emulação*: a aplicação real roda, mas a plataforma é virtualizada ou
+  degradada (ex.: =tc netem=, Distem, máquinas virtuais)
+  - tempo real: emular 1 h de execução custa \(\geq\) 1 h
+#+latex: \pause
+- *Simulação de eventos discretos*: o relógio salta de evento em evento
+  - o custo depende do *número de eventos*, não do tempo simulado
+  - o nível de detalhe do modelo define precisão *e* custo
+
+* Nível de detalhe: o modelo de rede
+
+Simular uma mensagem de 1 GB atravessando 5 roteadores...
+
+#+latex: \vfill\pause
+
+- *Nível de pacote* (ns-3, OMNeT++): cada pacote TCP/IP é um evento
+  - muito realista (filas, retransmissões, controle de congestionamento)
+  - \(\approx 10^6\) pacotes \(\times\) saltos \(\Rightarrow\) caro; não
+    escala para milhares de nós e horas de execução
+#+latex: \pause
+- *Nível de fluxo* (/flow-level/): uma mensagem é um *fluxo* com uma taxa
+  - eventos só no início e no fim de cada fluxo
+  - taxas obtidas resolvendo um problema de *compartilhamento de banda*
+  - ordens de grandeza mais rápido; precisão a ser *validada*
+#+latex: \pause
+- *Atraso fixo* (/delay-based/): tempo = latência + tamanho/banda, sem
+  contenção
+  - rapidíssimo, mas ignora a disputa por recursos
+
+#+latex: \vfill\pause
+
+\centering *O SimGrid adota modelos de nível de fluxo, validados
+experimentalmente.*
+
+* O SimGrid
+
+#+latex: \begin{columns}\begin{column}{.62\linewidth}
+
+- Arcabouço livre (LGPL) para simular aplicações distribuídas
+  - \(\approx\) 25 anos: começa por volta de 2000 (H. Casanova, UCSD) para
+    estudar escalonamento em grades
+  - desenvolvido por equipes Inria/CNRS/universidades (A. Legrand,
+    M. Quinson, F. Suter, ...)
+- Usado em centenas de artigos: grades, nuvens, P2P, HPC, IoT, ...
+- Versão atual: *SimGrid 4.x* (usaremos 4.1)
+
+#+latex: \end{column}\begin{column}{.36\linewidth}
+
+#+latex: \begin{block}{Interfaces}
+- *S4U* (C++ e Python): atores, atividades
+- *SMPI*: código MPI real sobre o simulador (aula 28)
+- /model checking/ (Mc SimGrid)
+- /plugins/: energia, DVFS, falhas
+#+latex: \end{block}
+
+#+latex: \end{column}\end{columns}
+
+#+latex: \vfill\pause
+
+- APIs antigas (MSG, SimDag) foram *removidas*: use S4U
+- Princípios de projeto (Casanova et al., JPDC 2014)
+  - *versatilidade*: um mesmo núcleo para domínios diferentes
+  - *escalabilidade*: modelos analíticos de fluxo, núcleo eficiente
+  - *precisão*: modelos validados contra experimentos reais
+
+* Arquitetura de uma simulação S4U
+
+#+latex: \vfill
+
+| Conceito   | O que é                                               |
+|------------+-------------------------------------------------------|
+| *Host*     | máquina com velocidade (flop/s), núcleos, /pstates/   |
+| *Link*     | enlace com banda (B/s) e latência (s)                 |
+| *Zone*     | (/NetZone/) agrupa hosts/links e define o roteamento  |
+| *Actor*    | processo simulado (seu código C++/Python) em um host  |
+| *Activity* | o que consome recursos: =Exec=, =Comm=, =Io=          |
+| *Mailbox*  | ponto de encontro (/rendezvous/) para comunicações    |
+
+#+latex: \vfill\pause
+
+- O usuário escreve *atores* (código sequencial comum)
+- Cada ação (=execute=, =put=, =get=, =sleep_for=) vira uma *atividade*
+  que consome recursos simulados
+- O núcleo (/maestro/) avança o relógio até a próxima atividade terminar e
+  acorda os atores correspondentes
+
+#+latex: \vfill\pause
+
+\centering O tempo simulado só avança por causa das atividades: o código
+do ator em si "não custa nada".
+
+* Mailboxes: comunicação por encontro
+
+#+begin_src cpp :exports code
+sg4::Mailbox* mb = sg4::Mailbox::by_name("trab-3");
+// no emissor (bloqueia até a comunicação terminar):
+mb->put(new double(1e9), 1e6);           // carga útil, tamanho simulado (bytes)
+// no receptor:
+auto custo = mb->get_unique<double>();   // recebe o ponteiro
+#+end_src
+
+#+latex: \vfill\pause
+
+- Uma mailbox *não é* um host: é um nome (como uma porta)
+  - a comunicação ocorre entre os hosts onde estão emissor e receptor
+- O que trafega na simulação é um ponteiro; o *tamanho simulado* é o que
+  define o custo na rede
+#+latex: \pause
+- Também há versões assíncronas: =put_async=, =get_async=, =exec_async= +
+  =wait=, =test=, =ActivitySet= (esperar várias)
+
+* Modelo de CPU
+
+- Um host tem velocidade \(s\) (flop/s); executar \(F\) flops sozinho leva
+  \[ t = F / s \]
+#+latex: \pause
+- Atividades concorrentes no mesmo host *compartilham* a capacidade
+  - 2 =Exec= simultâneos em um host de 1 núcleo: cada um a \(s/2\)
+  - host com \(c\) núcleos: cada atividade recebe no máximo \(s\)
+    (um núcleo), total \(\leq c \cdot s\)
+#+latex: \pause
+- Extensões: /pstates/ (DVFS), energia (/plugin/), indisponibilidade
+  (/traces/ de carga externa), falhas
+
+#+latex: \vfill\pause
+
+** Atenção                                                         :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+"Flops" aqui é uma *unidade de trabalho* abstrata. Para que
+\(t=F/s\) represente o real, \(F\) e \(s\) precisam ser *calibrados*
+(ex.: medir o tempo do kernel e não confiar no pico teórico) \(\rightarrow\)
+aula 28.
+
+* Modelo de rede: uma comunicação isolada
+
+Uma mensagem de \(S\) bytes por uma rota com latências \(L_i\) e bandas
+\(B_i\):
+\[
+  T(S) \;=\; \alpha \sum_i L_i \;+\; \frac{S}{\beta \,\min_i B_i}
+\]
+
+#+latex: \pause
+
+- Modelo padrão =LV08= (Velho & Legrand): \(\alpha = 13{,}01\),
+  \(\beta = 0{,}97\)
+  - \(\alpha\) captura o /slow-start/ do TCP; \(\beta\) o /overhead/ de
+    cabeçalhos
+  - valores obtidos *por calibração* contra simulações de pacote/medidas
+#+latex: \pause
+- Janela TCP: a taxa também é limitada por \(\gamma / (2 \cdot
+  \text{latência})\), \(\gamma\) = janela máxima (=network/TCP-gamma=,
+  padrão 4 MiB)
+
+#+latex: \vfill\pause
+
+- Tudo é configurável na linha de comando:
+#+begin_src sh :exports code
+./sim plat.xml --cfg=network/model:CM02 --cfg=network/latency-factor:1
+#+end_src
+  - modelos: =LV08= (padrão), =CM02= (sem correções), =SMPI= (por
+    partes, aula 28), =ns-3= (nível de pacote, se compilado)
+
+* Compartilhamento de banda: max-min
+
+Vários fluxos simultâneos disputam os links. Que taxa \(\rho_f\) cada um
+recebe?
+
+#+latex: \vfill\pause
+
+- *Equidade max-min*: maximizar a menor taxa, sujeito a
+  \(\sum_{f \ni \ell} \rho_f \leq B_\ell\) em cada link \(\ell\)
+- Algoritmo (/progressive filling/): aumenta todas as taxas juntas; quando
+  um link satura, congela os fluxos que passam por ele; repete
+
+#+latex: \vfill\pause
+
+** Exemplo                                                         :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+Link \(\ell_1\) com 100 MB/s, link \(\ell_2\) com 30 MB/s. Fluxo \(A\) usa
+\(\ell_1\) e \(\ell_2\); fluxo \(B\) usa só \(\ell_1\).
+- Enchimento: ambos a 30 MB/s \(\rightarrow\) \(\ell_2\) satura, \(A\) congela em 30
+- \(B\) continua crescendo até \(\ell_1\) saturar: \(\rho_B = 70\) MB/s
+
+#+latex: \vfill\pause
+
+- Quando um fluxo termina (ou começa), as taxas são *recalculadas*: o
+  custo é por evento de fluxo, não por pacote
+- LV08: pesos dependentes do RTT (fluxos com RTT longo recebem menos, como
+  no TCP real)
+
+* Por que não simular pacotes?
+
+Velho, Schnorr, Casanova, Legrand (ACM TOMACS, 2013): *"On the validity of
+flow-level TCP network models for grid and cloud simulations"*
+
+#+latex: \vfill\pause
+
+- Comparam modelos de fluxo com simulação de pacotes (GTNetS) em
+  muitos cenários (topologias, contenção)
+- Conclusões principais (qualitativas)
+  - modelos de fluxo ingênuos podem errar muito, sobretudo com
+    mensagens pequenas e certos padrões de contenção
+  - com correções (latência/banda, RTT) o modelo se torna preciso na
+    maioria dos cenários de interesse \(\rightarrow\) =LV08=
+  - permanecem casos patológicos: *conheça o domínio de validade*
+#+latex: \pause
+- Custo: o modelo de fluxo é *ordens de grandeza* mais rápido
+  - viabiliza simular milhares de nós e horas de execução em minutos
+
+#+latex: \vfill\pause
+
+\centering Precisão *e* velocidade: o modelo certo é o mais simples que é
+válido *para a pergunta feita*.
+
+* Descrevendo a plataforma em XML
+
+#+begin_src xml :exports code
+<?xml version='1.0'?>
+<!DOCTYPE platform SYSTEM "https://simgrid.org/simgrid.dtd">
+<platform version="4.1">
+  <zone id="z" routing="Full">
+    <host id="alice" speed="1Gf"/>
+    <host id="bob"   speed="2Gf" core="4"/>
+    <link id="l1" bandwidth="125MBps" latency="50us"/>
+    <route src="alice" dst="bob"><link_ctn id="l1"/></route>
+  </zone>
+</platform>
+#+end_src
+
+- Unidades explícitas: =Gf= (flop/s), =MBps=, =Gbps=, =us=, =ms=
+- Rotas são simétricas por padrão; =routing= = =Full=, =Floyd=,
+  =Dijkstra=, =Cluster=, =Star=, ... (zonas podem ser aninhadas)
+
+#+latex: \vfill\pause
+
+- Atalho para clusters (inclusive /fat-tree/, toro, /dragonfly/):
+#+begin_src xml :exports code
+<cluster id="c" prefix="node-" radical="0-31" suffix="" speed="1Gf"
+         bw="125MBps" lat="50us" bb_bw="1.25GBps" bb_lat="100us"/>
+#+end_src
+
+* Plataforma via código (C++)
+
+Para plataformas grandes ou geradas, a API de plataforma do S4U:
+
+#+begin_src cpp :exports code
+auto* z = e.get_netzone_root()->add_netzone_full("z");
+auto* a = z->add_host("alice", "1Gf");
+auto* b = z->add_host("bob", "2Gf")->set_core_count(4);
+auto* l = z->add_link("l1", "125MBps")->set_latency("50us");
+z->add_route(a, b, {l});
+z->seal();
+#+end_src
+
+#+latex: \vfill\pause
+
+- Mesmo modelo, outra sintaxe: laços, parâmetros, leitura de inventário
+- Plataformas reais descritas em XML circulam com o SimGrid (ex.:
+  Grid'5000)
+#+latex: \pause
+- Lembrete: *descrever* a plataforma (topologia) é fácil; *calibrar* seus
+  números (banda/latência efetivas, velocidade) é a parte difícil
+  (aula 28)
+
+* Estudo de caso: mestre--trabalhadores
+
+#+latex: \begin{columns}\begin{column}{.5\linewidth}
+
+- Um *mestre* tem \(N\) tarefas independentes
+  - cada tarefa: \(F\) flops de cálculo, \(S\) bytes de dados
+- \(W\) *trabalhadores* recebem tarefas, computam, pedem mais
+
+#+latex: \end{column}\begin{column}{.48\linewidth}
+
+#+begin_export latex
+\centering\scriptsize
+\begin{tikzpicture}[every node/.style={draw,rounded corners,minimum width=1.1cm}]
+  \node[fill=orange!30] (m) at (0,0) {mestre};
+  \foreach \i/\x in {0/-1.8,1/-0.6,2/0.6,3/1.8}
+    { \node[fill=blue!15] (w\i) at (\x,-1.6) {w\i};
+      \draw[->,thick] (m) -- (w\i); }
+\end{tikzpicture}
+#+end_export
+
+#+latex: \end{column}\end{columns}
+
+#+latex: \vfill\pause
+
+Perguntas de desempenho
+- Quantos trabalhadores vale a pena usar? Onde está o gargalo?
+- Como o tamanho dos dados \(S\) muda a resposta?
+- Plataforma heterogênea: distribuição /round-robin/ ou *sob demanda*?
+
+#+latex: \vfill\pause
+
+- É o exemplo do tutorial oficial do SimGrid (/Master-Workers/)
+- Código completo em =a27_simgrid/master-workers.cpp=, plataformas em
+  =a27_simgrid/platform-*.xml=, execução em =a27_simgrid/run.sh=
+
+* Código S4U: o mestre (/round-robin/)
+
+#+begin_src cpp :exports code
+#include <simgrid/s4u.hpp>
+namespace sg4 = simgrid::s4u;
+
+static void master_rr(std::vector<sg4::Mailbox*> workers)
+{
+  auto costs = draw_costs();       // N custos em flops (constantes ou aleatórios)
+  for (long i = 0; i < n_tasks; i++)
+    workers[i % workers.size()]->put(new double(costs[i]), bytes_per_task);
+  for (auto* mb : workers)         // sinal de fim: custo negativo
+    mb->put(new double(-1.0), 0);
+}
+#+end_src
+
+#+latex: \vfill\pause
+
+- =put= bloqueia até o trabalhador *receber*: se o trabalhador \(i\) ainda
+  está computando, o mestre espera por ele
+- =bytes_per_task= é o tamanho *simulado* da mensagem: define o custo na
+  rede
+
+* Código S4U: trabalhador e =main=
+
+#+begin_src cpp :exports code
+static void worker(int id) {
+  auto* mine   = sg4::Mailbox::by_name("w-" + std::to_string(id));
+  auto* master = sg4::Mailbox::by_name("master");
+  for (;;) {
+    if (strategy == "ondemand") master->put(new int(id), 64); // pede trabalho
+    auto cost = mine->get_unique<double>();
+    if (*cost < 0) break;
+    sg4::this_actor::execute(*cost);                          // "computa"
+  }
+}
+int main(int argc, char* argv[]) {
+  sg4::Engine e(&argc, argv);           // trata as opções --cfg=...
+  e.load_platform(argv[1]);
+  for (int i = 0; i < W; i++)
+    e.host_by_name("node-" + std::to_string(i))->add_actor("worker", worker, i);
+  e.host_by_name("master")->add_actor("master", master_rr, mbs);
+  e.run();                              // simula até todos os atores terminarem
+  printf("%f\n", sg4::Engine::get_clock());  // tempo simulado (s)
+}
+#+end_src
+
+* Variante: mestre sob demanda
+
+#+begin_src cpp :exports code
+static void master_ondemand(std::vector<sg4::Mailbox*> workers)
+{
+  auto costs = draw_costs();
+  sg4::Mailbox* me = sg4::Mailbox::by_name("master");
+  for (long i = 0; i < n_tasks; i++) {
+    auto who = me->get_unique<int>();           // quem pediu trabalho?
+    workers[*who]->put(new double(costs[i]), bytes_per_task);
+  }
+  for (size_t k = 0; k < workers.size(); k++) { // fim para todos
+    auto who = me->get_unique<int>();
+    workers[*who]->put(new double(-1.0), 0);
+  }
+}
+#+end_src
+
+#+latex: \vfill\pause
+
+- Trabalhadores rápidos pedem mais vezes \(\Rightarrow\) balanceamento
+  automático
+- Custo: uma mensagem extra (pequena) por tarefa
+
+* Compilando e executando
+
+Usamos a imagem Docker oficial (SimGrid 4.1), sem instalar nada:
+
+#+begin_src sh :exports code
+docker run --rm -v "$PWD":/work -w /work docker.io/simgrid/stable sh -c '
+  g++ -O2 -std=c++17 master-workers.cpp -lsimgrid -o master-workers
+  ./master-workers platform-homog.xml rr 8 500 1e9 1e6 0 1 \
+       --log=root.thres:critical'
+# saída: rr,8,500,1e+09,1e+06,0,1,63.729072,0.005987
+#+end_src
+
+- Argumentos: plataforma, estratégia, \(W\), \(N\), \(F\) médio (flops),
+  \(S\) (bytes), coef. de variação dos custos, semente
+- Saída: uma linha CSV com o *tempo simulado* (s) e o *tempo de parede*
+  da simulação
+
+#+latex: \vfill\pause
+
+- Opções do simulador vão na linha de comando (~--cfg=...~,
+  ~--log=...~); ~--help-cfg~ lista todas
+- Visualização: ~--cfg=tracing:yes~ gera rastros Paje (ViTE, pajeng)
+
+* Plataformas e plano experimental
+
+- Zona =Cluster= com 1 mestre + 32 nós; cada host tem um link privado
+  full-duplex (125 MB/s, 50 \(\mu\)s) até um /backbone/ (1,25 GB/s,
+  100 \(\mu\)s)
+#+begin_src xml :exports code
+<host id="node-1" speed="0.25Gf"/>
+<link id="l-1" bandwidth="125MBps" latency="50us" sharing_policy="SPLITDUPLEX"/>
+<host_link id="node-1" up="l-1_UP" down="l-1_DOWN"/>
+#+end_src
+  - =SPLITDUPLEX=: ida e volta não competem (o padrão =SHARED= divide a
+    banda, inclusive com o tráfego reverso de ACKs modelado)
+  - *homogênea*: todos a 1 Gflop/s
+  - *heterogênea*: 1,75 / 0,25 / 1,25 / 0,75 Gflop/s em ciclo (média 1)
+
+#+latex: \vfill\pause
+
+| Fator                | Níveis                                |
+|----------------------+---------------------------------------|
+| plataforma           | homogênea, heterogênea                |
+| estratégia           | /round-robin/ (rr), sob demanda       |
+| \(W\) trabalhadores  | 1, 2, 4, 6, ..., 16, 20, 24, 28, 32   |
+| \(S\) (dados/tarefa) | 1 MB, 10 MB                           |
+| custos das tarefas   | constantes; Gamma com CV = 0,5 (10 sementes) |
+
+\(N = 500\) tarefas de \(F = 10^9\) flops (1 s em um nó de 1 Gflop/s).
+Total: 1144 simulações em \(\approx\) 25 s (com compilação e Docker).
+
+* Verificação: confira um caso à mão
+
+Homogênea, rr, \(W = 1\), \(S = 1\) MB, custos constantes. Simulado:
+*505,427 s*.
+
+#+latex: \vfill\pause
+
+- Rota mestre \(\rightarrow\) =node-0=: =l-master_UP= + /backbone/ +
+  =l-0_DOWN=: \(\sum L = 50+100+50 = 200\ \mu\)s
+- Comunicação (LV08):
+  \[ 13{,}01 \times 200\,\mu\text{s} + \frac{10^6}{0{,}97 \times 125 \cdot 10^6}
+     = 2{,}60\text{ ms} + 8{,}25\text{ ms} = 10{,}85\text{ ms} \]
+- Com 1 trabalhador, não há sobreposição: cada tarefa custa
+  \(1 + 0{,}01085\) s
+  \[ 500 \times 1{,}01085 \approx 505{,}42\text{ s} \quad (+ \text{2,6 ms da
+     mensagem de fim}) \]
+
+#+latex: \vfill\pause
+
+** Lição                                                           :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+*Verificação* = o programa implementa o modelo que pensamos? Casos
+pequenos calculáveis à mão pegam erros de plataforma (rota errada, unidade
+errada, =MBps= vs =Mbps=...) antes de qualquer gráfico.
+
+* Resultado: tempo simulado vs. número de trabalhadores
+
+#+attr_latex: :width .95\linewidth
+[[file:pdf_babel/a27_tempo_workers.pdf]]
+
+\scriptsize Custos constantes (simulação determinística: 1 execução por
+ponto). Tracejado: ideal \(N F / (W \bar{s})\), sem comunicação.
+
+* Interpretação: onde está o gargalo?
+
+- *1 MB por tarefa*: quase linear até 32 trabalhadores
+  - a cada tarefa o mestre gasta \(\approx 10{,}9\) ms enviando; 32
+    trabalhadores consomem 32 tarefas/s \(\ll\) 92 tarefas/s que o mestre
+    consegue enviar
+#+latex: \pause
+- *10 MB por tarefa*: satura em \(\approx 43{,}6\) s a partir de
+  \(W \approx 12\)
+  - o link de saída do mestre é o gargalo:
+    \(10^7 / (0{,}97 \cdot 125 \cdot 10^6) + 2{,}6\text{ ms} \approx 85\) ms
+    por tarefa
+  - \(500 \times 0{,}085 \approx 42{,}5\) s \(+ 1\) s (última tarefa)
+    \(\approx 43{,}5\) s
+  - mais trabalhadores não ajudam: \(W^* \approx 1/0{,}085 \approx 12\)
+#+latex: \pause
+- Sob demanda satura um pouco acima (\(\approx 44{,}8\) s): a mensagem de
+  pedido também passa pelo mestre
+
+#+latex: \vfill\pause
+
+\centering Uma *lei operacional* (aulas de modelagem) explica a curva: o
+simulador permite *testá-la* e ver onde deixa de valer.
+
+* Heterogeneidade: /round-robin/ vs. sob demanda
+
+- Heterogênea com *rr*: o tempo é ditado pelo trabalhador *mais lento*
+  - \(W=1\) (só o nó de 1,75 Gf): 291 s; \(W = 2\) (inclui o nó de 0,25 Gf):
+    *1003 s*, pior que com 1!
+  - o mestre bloqueia em =put= esperando o nó lento terminar
+#+latex: \pause
+- Heterogênea *sob demanda*: praticamente igual à homogênea de mesma
+  capacidade total (\(W=32\): 16,6 s vs. 16,5 s)
+
+#+latex: \vfill\pause
+
+** Mensagem                                                        :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+- A *interação* plataforma \(\times\) estratégia domina: comparar
+  estratégias numa plataforma homogênea esconderia o problema
+- Planeje os fatores (aula de projeto de experimentos): o efeito de um
+  fator depende do nível dos outros
+
+* A simulação é determinística: e a variabilidade?
+
+- Mesma entrada \(\Rightarrow\) mesma saída, bit a bit
+  - rodar 10 vezes o mesmo cenário dá 10 números idênticos: *IC de largura
+    zero não significa nada*
+#+latex: \pause
+- De onde pode vir variabilidade num estudo por simulação?
+  1. *Entrada estocástica*: custos das tarefas, chegadas, falhas, carga
+     externa \(\rightarrow\) sorteadas com uma semente
+  2. *Incerteza nos parâmetros*: banda, velocidade calibradas com erro
+     \(\rightarrow\) análise de sensibilidade
+  3. *Variabilidade da plataforma real* (ruído de SO, temperatura...):
+     não está no modelo determinístico \(\rightarrow\) precisa ser
+     *modelada* explicitamente (aula 28, HPL)
+#+latex: \pause
+- Réplicas fazem sentido para (1): sementes diferentes = réplicas
+  *independentes* (aula 26); calcule média e IC sobre elas
+  - o IC responde a "quanto o resultado depende do sorteio da carga",
+    não a "quanto o simulador erra"
+
+* Réplicas e intervalos de confiança
+
+#+attr_latex: :width .95\linewidth
+[[file:pdf_babel/a27_ic_replicas.pdf]]
+
+\scriptsize Custos \(\sim\) Gamma (média \(10^9\) flops, CV = 0,5), \(S\)
+= 1 MB, 10 sementes por ponto; barras: IC de 95% (\(t\) de Student).
+Losango: custos constantes.
+
+* Lendo o gráfico de ICs
+
+- Com custos aleatórios, o tempo depende do sorteio: os ICs mostram essa
+  incerteza
+  - na homogênea, rr e sob demanda praticamente coincidem
+  - na heterogênea, os ICs *não se sobrepõem*: a diferença entre as
+    estratégias é muito maior que a variação devida à carga
+#+latex: \pause
+- O caso determinístico (losango) não é a média do caso aleatório
+  - com sincronização, \(\mathbb{E}[\max_i T_i] \geq \max_i
+    \mathbb{E}[T_i]\): variabilidade custa tempo
+  - substituir uma distribuição pela média pode *enviesar* a predição
+    (voltaremos a isso no HPL)
+#+latex: \pause
+- Pareamento: usar as *mesmas sementes* para rr e sob demanda (números
+  aleatórios comuns) reduz a variância da *diferença* (como blocking,
+  aula 22)
+
+* Quanto custa simular?
+
+#+latex: \begin{columns}\begin{column}{.55\linewidth}
+
+#+attr_latex: :width \linewidth
+[[file:pdf_babel/a27_custo_sim.pdf]]
+
+#+latex: \end{column}\begin{column}{.43\linewidth}
+
+- 32 trabalhadores, sob demanda, \(10^3\) a \(10^6\) tarefas
+- Custo \(\approx\) linear no *número de eventos*
+- \(10^6\) tarefas: \(\approx 8{,}8\) horas simuladas em \(\approx 6{,}6\) s
+  de parede (\(\approx 5000\times\) mais rápido que o real)
+
+#+latex: \end{column}\end{columns}
+
+#+latex: \vfill\pause
+
+- O tempo simulado não importa; importam os eventos (início/fim de cada
+  =Exec= e =Comm=)
+- Medido na imagem Docker, em um notebook: ordem de grandeza, não um
+  /benchmark/ do SimGrid
+
+* Verificação e validação
+
+#+latex: \begin{columns}\begin{column}{.49\linewidth}
+
+#+latex: \begin{block}{Verificação}
+"Construí o simulador certo?"
+- casos calculáveis à mão
+- casos-limite (\(W=1\), \(S=0\), banda infinita)
+- leis operacionais, monotonia
+- rastros e visualização
+- testes de regressão
+#+latex: \end{block}
+
+#+latex: \end{column}\begin{column}{.49\linewidth}
+
+#+latex: \begin{block}{Validação}
+"Construí o simulador do sistema certo?"
+- comparar com medições reais
+- em cenários *diferentes* dos usados na calibração
+- reportar o erro e o domínio de validade
+- tendências corretas \(\neq\) valores corretos
+#+latex: \end{block}
+
+#+latex: \end{column}\end{columns}
+
+#+latex: \vfill\pause
+
+- Erro comum (aula 26): validar só no cenário de calibração \(\rightarrow\)
+  circularidade
+- Erro comum: confiar nos valores nominais (pico de flop/s, banda do
+  fabricante)
+- Boa prática: tudo versionado (código, plataforma, =--cfg=, sementes,
+  versão do SimGrid, imagem Docker) \(\rightarrow\) qualquer um reproduz
+
+* Resumo
+
+- Simular sistemas distribuídos: barato, reprodutível, escalável, permite
+  cenários inexistentes \pause
+- SimGrid: modelos *analíticos de fluxo* (CPU, rede max-min LV08) --- um
+  compromisso validado entre precisão e velocidade \pause
+- S4U: atores + atividades (=Exec=, =Comm=) + mailboxes; plataforma em XML
+  ou C++ \pause
+- Mestre--trabalhadores: o simulador revelou o gargalo do mestre e a
+  interação estratégia \(\times\) heterogeneidade em segundos \pause
+- Simulação determinística: réplicas só fazem sentido com entradas
+  estocásticas; verificação antes de interpretar
+
+#+latex: \vfill\pause
+
+** Próxima aula                                                    :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+SimGrid II: *calibração e validação*. SMPI (MPI real sobre o simulador)
+e o estudo de caso HPL: o =dgemm= modelado por *regressão linear*.
+
+* Referências
+
+- R. Jain. /The Art of Computer Systems Performance Analysis/. Wiley, 1991.
+  Capítulos 24--25 (simulação, verificação e validação).
+- H. Casanova, A. Giersch, A. Legrand, M. Quinson, F. Suter. Versatile,
+  scalable, and accurate simulation of distributed applications and
+  platforms. /JPDC/, 74(10), 2014.
+- P. Velho, L. M. Schnorr, H. Casanova, A. Legrand. On the validity of
+  flow-level TCP network models for grid and cloud simulations. /ACM
+  TOMACS/, 23(4), 2013.
+- Documentação do SimGrid: tutorial /Master-Workers/ (S4U), modelos,
+  opções =--cfg=, descrição de plataformas: https://simgrid.org/doc/latest/
+- Código e dados desta aula: =a27_simgrid/= (SimGrid 4.1, imagem
+  =docker.io/simgrid/stable=).
+
+* Código das figuras                                               :noexport:
+
+#+begin_src R :results output graphics file :file pdf_babel/a27_tempo_workers.pdf :exports none :tangle aula27-simgrid-pt-br-figs.R
+library(ggplot2); library(dplyr)
+d <- read.csv("a27_simgrid/results.csv") %>%
+  mutate(platform = factor(platform, c("homog", "heterog"),
+                           c("homogênea", "heterogênea")),
+         strategy = factor(strategy, c("rr", "ondemand"),
+                           c("round-robin", "sob demanda")),
+         dados = factor(bytes, c(1e6, 1e7), c("1 MB", "10 MB")))
+det <- d %>% filter(cv == 0)
+# referência ideal: N*F / capacidade total dos W primeiros nós
+sp <- list("homogênea" = rep(1, 32), "heterogênea" = rep(c(1.75, .25, 1.25, .75), 8))
+ideal <- expand.grid(workers = 1:32, platform = names(sp)) %>%
+  rowwise() %>% mutate(t = 500 / sum(sp[[platform]][1:workers])) %>% ungroup() %>%
+  mutate(platform = factor(platform, levels(d$platform)))
+p <- ggplot(det, aes(workers, simtime, color = strategy, shape = dados,
+                     linetype = dados)) +
+  geom_line(data = ideal, aes(workers, t), inherit.aes = FALSE,
+            linetype = "dashed", color = "grey50") +
+  geom_line() + geom_point(size = 2) +
+  scale_y_log10(breaks = c(10, 20, 50, 100, 200, 500, 1000)) +
+  facet_wrap(~platform) + theme_bw(base_size = 14) +
+  labs(x = "Número de trabalhadores W", y = "Tempo simulado (s, log)",
+       color = "Estratégia", shape = "Dados/tarefa", linetype = "Dados/tarefa") +
+  theme(legend.position = "right")
+ggsave("pdf_babel/a27_tempo_workers.pdf", p, width = 8, height = 4.8)
+#+end_src
+
+#+begin_src R :results output graphics file :file pdf_babel/a27_ic_replicas.pdf :exports none :tangle aula27-simgrid-pt-br-figs.R
+library(ggplot2); library(dplyr)
+d <- read.csv("a27_simgrid/results.csv") %>% filter(bytes == 1e6) %>%
+  mutate(platform = factor(platform, c("homog", "heterog"),
+                           c("homogênea", "heterogênea")),
+         strategy = factor(strategy, c("rr", "ondemand"),
+                           c("round-robin", "sob demanda")))
+ic <- d %>% filter(cv > 0) %>% group_by(platform, strategy, workers) %>%
+  summarise(n = n(), m = mean(simtime), s = sd(simtime), .groups = "drop") %>%
+  mutate(e = qt(.975, n - 1) * s / sqrt(n))
+det <- d %>% filter(cv == 0)
+p <- ggplot(ic, aes(workers, m, color = strategy)) +
+  geom_line() + geom_errorbar(aes(ymin = m - e, ymax = m + e), width = .8) +
+  geom_point(data = det, aes(workers, simtime), shape = 5, size = 2) +
+  scale_y_log10(breaks = c(10, 20, 50, 100, 200, 500, 1000)) +
+  facet_wrap(~platform) + theme_bw(base_size = 14) +
+  labs(x = "Número de trabalhadores W", y = "Tempo simulado (s, log)",
+       color = "Estratégia") + theme(legend.position = "bottom")
+ggsave("pdf_babel/a27_ic_replicas.pdf", p, width = 8, height = 4.6)
+#+end_src
+
+#+begin_src R :results output graphics file :file pdf_babel/a27_custo_sim.pdf :exports none :tangle aula27-simgrid-pt-br-figs.R
+library(ggplot2)
+s <- read.csv("a27_simgrid/scaling.csv")
+p <- ggplot(s, aes(tasks, walltime)) + geom_point(size = 2.5) +
+  geom_smooth(method = "lm", formula = y ~ x, se = FALSE, color = "grey40",
+              linewidth = .5) +
+  scale_x_log10() + scale_y_log10() + theme_bw(base_size = 16) +
+  labs(x = "Número de tarefas N (log)", y = "Tempo de parede da simulação (s, log)")
+ggsave("pdf_babel/a27_custo_sim.pdf", p, width = 6, height = 4.5)
+#+end_src

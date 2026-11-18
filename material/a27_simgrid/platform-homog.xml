@@ -1,0 +1,106 @@
+<?xml version='1.0'?>
+<!DOCTYPE platform SYSTEM "https://simgrid.org/simgrid.dtd">
+<platform version="4.1">
+  <zone id="cl" routing="Cluster">
+    <host id="master" speed="1Gf"/>
+    <link id="l-master" bandwidth="125MBps" latency="50us" sharing_policy="SPLITDUPLEX"/>
+    <host_link id="master" up="l-master_UP" down="l-master_DOWN"/>
+    <host id="node-0" speed="1Gf"/>
+    <link id="l-0" bandwidth="125MBps" latency="50us" sharing_policy="SPLITDUPLEX"/>
+    <host_link id="node-0" up="l-0_UP" down="l-0_DOWN"/>
+    <host id="node-1" speed="1Gf"/>
+    <link id="l-1" bandwidth="125MBps" latency="50us" sharing_policy="SPLITDUPLEX"/>
+    <host_link id="node-1" up="l-1_UP" down="l-1_DOWN"/>
+    <host id="node-2" speed="1Gf"/>
+    <link id="l-2" bandwidth="125MBps" latency="50us" sharing_policy="SPLITDUPLEX"/>
+    <host_link id="node-2" up="l-2_UP" down="l-2_DOWN"/>
+    <host id="node-3" speed="1Gf"/>
+    <link id="l-3" bandwidth="125MBps" latency="50us" sharing_policy="SPLITDUPLEX"/>
+    <host_link id="node-3" up="l-3_UP" down="l-3_DOWN"/>
+    <host id="node-4" speed="1Gf"/>
+    <link id="l-4" bandwidth="125MBps" latency="50us" sharing_policy="SPLITDUPLEX"/>
+    <host_link id="node-4" up="l-4_UP" down="l-4_DOWN"/>
+    <host id="node-5" speed="1Gf"/>
+    <link id="l-5" bandwidth="125MBps" latency="50us" sharing_policy="SPLITDUPLEX"/>
+    <host_link id="node-5" up="l-5_UP" down="l-5_DOWN"/>
+    <host id="node-6" speed="1Gf"/>
+    <link id="l-6" bandwidth="125MBps" latency="50us" sharing_policy="SPLITDUPLEX"/>
+    <host_link id="node-6" up="l-6_UP" down="l-6_DOWN"/>
+    <host id="node-7" speed="1Gf"/>
+    <link id="l-7" bandwidth="125MBps" latency="50us" sharing_policy="SPLITDUPLEX"/>
+    <host_link id="node-7" up="l-7_UP" down="l-7_DOWN"/>
+    <host id="node-8" speed="1Gf"/>
+    <link id="l-8" bandwidth="125MBps" latency="50us" sharing_policy="SPLITDUPLEX"/>
+    <host_link id="node-8" up="l-8_UP" down="l-8_DOWN"/>
+    <host id="node-9" speed="1Gf"/>
+    <link id="l-9" bandwidth="125MBps" latency="50us" sharing_policy="SPLITDUPLEX"/>
+    <host_link id="node-9" up="l-9_UP" down="l-9_DOWN"/>
+    <host id="node-10" speed="1Gf"/>
+    <link id="l-10" bandwidth="125MBps" latency="50us" sharing_policy="SPLITDUPLEX"/>
+    <host_link id="node-10" up="l-10_UP" down="l-10_DOWN"/>
+    <host id="node-11" speed="1Gf"/>
+    <link id="l-11" bandwidth="125MBps" latency="50us" sharing_policy="SPLITDUPLEX"/>
+    <host_link id="node-11" up="l-11_UP" down="l-11_DOWN"/>
+    <host id="node-12" speed="1Gf"/>
+    <link id="l-12" bandwidth="125MBps" latency="50us" sharing_policy="SPLITDUPLEX"/>
+    <host_link id="node-12" up="l-12_UP" down="l-12_DOWN"/>
+    <host id="node-13" speed="1Gf"/>
+    <link id="l-13" bandwidth="125MBps" latency="50us" sharing_policy="SPLITDUPLEX"/>
+    <host_link id="node-13" up="l-13_UP" down="l-13_DOWN"/>
+    <host id="node-14" speed="1Gf"/>
+    <link id="l-14" bandwidth="125MBps" latency="50us" sharing_policy="SPLITDUPLEX"/>
+    <host_link id="node-14" up="l-14_UP" down="l-14_DOWN"/>
+    <host id="node-15" speed="1Gf"/>
+    <link id="l-15" bandwidth="125MBps" latency="50us" sharing_policy="SPLITDUPLEX"/>
+    <host_link id="node-15" up="l-15_UP" down="l-15_DOWN"/>
+    <host id="node-16" speed="1Gf"/>
+    <link id="l-16" bandwidth="125MBps" latency="50us" sharing_policy="SPLITDUPLEX"/>
+    <host_link id="node-16" up="l-16_UP" down="l-16_DOWN"/>
+    <host id="node-17" speed="1Gf"/>
+    <link id="l-17" bandwidth="125MBps" latency="50us" sharing_policy="SPLITDUPLEX"/>
+    <host_link id="node-17" up="l-17_UP" down="l-17_DOWN"/>
+    <host id="node-18" speed="1Gf"/>
+    <link id="l-18" bandwidth="125MBps" latency="50us" sharing_policy="SPLITDUPLEX"/>
+    <host_link id="node-18" up="l-18_UP" down="l-18_DOWN"/>
+    <host id="node-19" speed="1Gf"/>
+    <link id="l-19" bandwidth="125MBps" latency="50us" sharing_policy="SPLITDUPLEX"/>
+    <host_link id="node-19" up="l-19_UP" down="l-19_DOWN"/>
+    <host id="node-20" speed="1Gf"/>
+    <link id="l-20" bandwidth="125MBps" latency="50us" sharing_policy="SPLITDUPLEX"/>
+    <host_link id="node-20" up="l-20_UP" down="l-20_DOWN"/>
+    <host id="node-21" speed="1Gf"/>
+    <link id="l-21" bandwidth="125MBps" latency="50us" sharing_policy="SPLITDUPLEX"/>
+    <host_link id="node-21" up="l-21_UP" down="l-21_DOWN"/>
+    <host id="node-22" speed="1Gf"/>
+    <link id="l-22" bandwidth="125MBps" latency="50us" sharing_policy="SPLITDUPLEX"/>
+    <host_link id="node-22" up="l-22_UP" down="l-22_DOWN"/>
+    <host id="node-23" speed="1Gf"/>
+    <link id="l-23" bandwidth="125MBps" latency="50us" sharing_policy="SPLITDUPLEX"/>
+    <host_link id="node-23" up="l-23_UP" down="l-23_DOWN"/>
+    <host id="node-24" speed="1Gf"/>
+    <link id="l-24" bandwidth="125MBps" latency="50us" sharing_policy="SPLITDUPLEX"/>
+    <host_link id="node-24" up="l-24_UP" down="l-24_DOWN"/>
+    <host id="node-25" speed="1Gf"/>
+    <link id="l-25" bandwidth="125MBps" latency="50us" sharing_policy="SPLITDUPLEX"/>
+    <host_link id="node-25" up="l-25_UP" down="l-25_DOWN"/>
+    <host id="node-26" speed="1Gf"/>
+    <link id="l-26" bandwidth="125MBps" latency="50us" sharing_policy="SPLITDUPLEX"/>
+    <host_link id="node-26" up="l-26_UP" down="l-26_DOWN"/>
+    <host id="node-27" speed="1Gf"/>
+    <link id="l-27" bandwidth="125MBps" latency="50us" sharing_policy="SPLITDUPLEX"/>
+    <host_link id="node-27" up="l-27_UP" down="l-27_DOWN"/>
+    <host id="node-28" speed="1Gf"/>
+    <link id="l-28" bandwidth="125MBps" latency="50us" sharing_policy="SPLITDUPLEX"/>
+    <host_link id="node-28" up="l-28_UP" down="l-28_DOWN"/>
+    <host id="node-29" speed="1Gf"/>
+    <link id="l-29" bandwidth="125MBps" latency="50us" sharing_policy="SPLITDUPLEX"/>
+    <host_link id="node-29" up="l-29_UP" down="l-29_DOWN"/>
+    <host id="node-30" speed="1Gf"/>
+    <link id="l-30" bandwidth="125MBps" latency="50us" sharing_policy="SPLITDUPLEX"/>
+    <host_link id="node-30" up="l-30_UP" down="l-30_DOWN"/>
+    <host id="node-31" speed="1Gf"/>
+    <link id="l-31" bandwidth="125MBps" latency="50us" sharing_policy="SPLITDUPLEX"/>
+    <host_link id="node-31" up="l-31_UP" down="l-31_DOWN"/>
+    <backbone id="backbone" bandwidth="1.25GBps" latency="100us"/>
+  </zone>
+</platform>
