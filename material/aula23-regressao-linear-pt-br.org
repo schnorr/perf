@@ -1,0 +1,739 @@
+# -*- coding: utf-8 -*-
+# -*- mode: org -*-
+#+startup: beamer overview indent
+#+LANGUAGE: pt-br
+#+TAGS: noexport(n)
+#+EXPORT_EXCLUDE_TAGS: noexport
+#+EXPORT_SELECT_TAGS: export
+
+#+Title: Análise de Desempenho de Sist. Comp.
+#+SubTitle: Regressão Linear Simples
+#+Author: Prof. Lucas Mello Schnorr
+#+Date: \copyleft
+
+#+LaTeX_CLASS: beamer
+#+LaTeX_CLASS_OPTIONS: [xcolor=dvipsnames,10pt]
+#+OPTIONS: H:1 num:t toc:nil \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+#+LATEX_HEADER: \input{org-babel.tex}
+
+* Código R das figuras                                             :noexport:
+
+Todas as figuras desta aula são geradas pelos blocos abaixo, que são
+extraídos (/tangle/) para =aula23-regressao-linear-pt-br-figs.R=. Para
+regenerar, a partir de =material/=:
+
+#+begin_example
+emacs -batch aula23-regressao-linear-pt-br.org --funcall org-babel-tangle
+Rscript aula23-regressao-linear-pt-br-figs.R
+#+end_example
+
+#+begin_src R :results none :exports none :tangle aula23-regressao-linear-pt-br-figs.R
+## Preparação comum: pacotes, dados reais do mmul e conjunto didático
+suppressMessages(library(ggplot2))
+theme_set(theme_bw(base_size = 14))
+
+## Dados reais (coletados com a23_coleta_mmul.sh; linhas na ordem de execução)
+mmul <- read.csv("a23_mmul_tempos.csv")
+mmul$ordem <- seq_len(nrow(mmul))
+
+## Conjunto didático (slides SMPE de A. Legrand)
+toy <- data.frame(x = c(1, 2, 3, 5, 7, 9, 11, 13, 14, 15),
+                  y = c(3, 1, 5, 2, 6, 4, 7, 9, 8, 5))
+ls_yx <- coef(lm(y ~ x, data = toy))            # y em função de x
+c_xy  <- coef(lm(x ~ y, data = toy))            # x em função de y
+ls_xy <- c(-c_xy[1] / c_xy[2], 1 / c_xy[2])     # reescrita como y = a + b x
+pc    <- prcomp(toy[, c("x", "y")])$rotation[, 1]
+dem   <- c(mean(toy$y) - pc[2] / pc[1] * mean(toy$x), pc[2] / pc[1])
+ret   <- c(mean(toy$y) - sd(toy$y) / sd(toy$x) * mean(toy$x), sd(toy$y) / sd(toy$x))
+olho  <- c(2.6, 0.385)
+
+base_toy <- function() {
+  ggplot(toy, aes(x, y)) +
+    coord_fixed(xlim = c(0, 16), ylim = c(0, 16)) +
+    theme_bw(base_size = 12)
+}
+salva_toy <- function(p, f) ggsave(f, p, width = 3.4, height = 3.4)
+#+end_src
+
+#+begin_src R :results output graphics file :file pdf_babel/a23_mmul_dados.pdf :exports none :tangle aula23-regressao-linear-pt-br-figs.R
+p <- ggplot(mmul, aes(n, tempo)) +
+  geom_point(alpha = .5, color = "blue") +
+  labs(x = "Ordem da matriz (n)", y = "Tempo de parede (s)")
+ggsave("pdf_babel/a23_mmul_dados.pdf", p, width = 6, height = 3.4)
+#+end_src
+
+#+begin_src R :results output graphics file :file pdf_babel/a23_toy_pontos.pdf :exports none :tangle aula23-regressao-linear-pt-br-figs.R
+salva_toy(base_toy() + geom_point(color = "blue"), "pdf_babel/a23_toy_pontos.pdf")
+#+end_src
+
+#+begin_src R :results output graphics file :file pdf_babel/a23_toy_olho.pdf :exports none :tangle aula23-regressao-linear-pt-br-figs.R
+salva_toy(base_toy() + geom_point(color = "blue") +
+            geom_abline(intercept = olho[1], slope = olho[2], color = "red"),
+          "pdf_babel/a23_toy_olho.pdf")
+#+end_src
+
+#+begin_src R :results output graphics file :file pdf_babel/a23_toy_mq.pdf :exports none :tangle aula23-regressao-linear-pt-br-figs.R
+p <- base_toy() +
+  geom_abline(intercept = olho[1], slope = olho[2], color = "gray60") +
+  geom_segment(aes(xend = x, yend = ls_yx[1] + ls_yx[2] * x)) +
+  geom_point(color = "blue") +
+  geom_abline(intercept = ls_yx[1], slope = ls_yx[2], color = "red")
+salva_toy(p, "pdf_babel/a23_toy_mq.pdf")
+#+end_src
+
+#+begin_src R :results output graphics file :file pdf_babel/a23_toy_xy.pdf :exports none :tangle aula23-regressao-linear-pt-br-figs.R
+p <- base_toy() +
+  geom_abline(intercept = ls_yx[1], slope = ls_yx[2], color = "gray60") +
+  geom_segment(aes(xend = (y - ls_xy[1]) / ls_xy[2], yend = y)) +
+  geom_point(color = "blue") +
+  geom_abline(intercept = ls_xy[1], slope = ls_xy[2], color = "red")
+salva_toy(p, "pdf_babel/a23_toy_xy.pdf")
+#+end_src
+
+#+begin_src R :results output graphics file :file pdf_babel/a23_toy_deming.pdf :exports none :tangle aula23-regressao-linear-pt-br-figs.R
+u <- c(1, dem[2]) / sqrt(1 + dem[2]^2)
+proj <- with(toy, x * u[1] + (y - dem[1]) * u[2])
+toy$xe <- proj * u[1]; toy$ye <- proj * u[2] + dem[1]
+p <- base_toy() +
+  geom_segment(aes(xend = xe, yend = ye)) +
+  geom_point(color = "blue") +
+  geom_abline(intercept = dem[1], slope = dem[2], color = "red")
+salva_toy(p, "pdf_babel/a23_toy_deming.pdf")
+#+end_src
+
+#+begin_src R :results output graphics file :file pdf_babel/a23_toy_retangulos.pdf :exports none :tangle aula23-regressao-linear-pt-br-figs.R
+p <- base_toy() +
+  geom_rect(aes(xmin = pmin(x, (y - ret[1]) / ret[2]), xmax = pmax(x, (y - ret[1]) / ret[2]),
+                ymin = pmin(y, ret[1] + ret[2] * x), ymax = pmax(y, ret[1] + ret[2] * x)),
+            alpha = .3) +
+  geom_point(color = "blue") +
+  geom_abline(intercept = ret[1], slope = ret[2], color = "red")
+salva_toy(p, "pdf_babel/a23_toy_retangulos.pdf")
+#+end_src
+
+#+begin_src R :results output graphics file :file pdf_babel/a23_toy_todas.pdf :exports none :tangle aula23-regressao-linear-pt-br-figs.R
+retas <- data.frame(
+  tipo = c("Mín. quadrados y~x", "Mín. quadrados x~y", "Deming (distâncias)",
+           "Mín. retângulos", "A olho"),
+  a = c(ls_yx[1], ls_xy[1], dem[1], ret[1], olho[1]),
+  b = c(ls_yx[2], ls_xy[2], dem[2], ret[2], olho[2]))
+retas$tipo <- factor(retas$tipo, levels = retas$tipo)
+p <- ggplot(toy, aes(x, y)) +
+  geom_abline(data = retas, aes(intercept = a, slope = b, color = tipo), linewidth = .9) +
+  geom_point(color = "black", size = 2) +
+  scale_color_brewer(palette = "Set1") +
+  coord_fixed(xlim = c(0, 16), ylim = c(0, 12)) +
+  labs(color = "Reta") + theme_bw(base_size = 13)
+ggsave("pdf_babel/a23_toy_todas.pdf", p, width = 7, height = 4)
+#+end_src
+
+#+begin_src R :results output graphics file :file pdf_babel/a23_modelo.pdf :exports none :tangle aula23-regressao-linear-pt-br-figs.R
+set.seed(23)
+b0 <- 5; b1 <- .5; s <- 3
+sim <- data.frame(x = runif(60, -20, 60))
+sim$y <- b0 + b1 * sim$x + rnorm(60, sd = s)
+e <- seq(-3.5 * s, 3.5 * s, length.out = 100)
+dens <- do.call(rbind, lapply(c(-5, 20, 45), function(x0)
+  data.frame(x0 = x0, x = x0 + 60 * dnorm(e, sd = s), y = b0 + b1 * x0 + e)))
+p <- ggplot(sim, aes(x, y)) +
+  geom_point(color = "blue", alpha = .6) +
+  geom_abline(intercept = b0, slope = b1, color = "red", linewidth = 1) +
+  geom_vline(xintercept = c(-5, 20, 45), linetype = 3, color = "gray50") +
+  geom_path(data = dens, aes(x, y, group = x0), color = "darkgreen", linewidth = .8) +
+  labs(x = "x", y = "y")
+ggsave("pdf_babel/a23_modelo.pdf", p, width = 5, height = 4)
+#+end_src
+
+#+begin_src R :results output graphics file :file pdf_babel/a23_mmul_lin.pdf :exports none :tangle aula23-regressao-linear-pt-br-figs.R
+r1 <- lm(tempo ~ n, data = mmul)
+p <- ggplot(mmul, aes(n, tempo)) +
+  geom_point(alpha = .4, color = "blue") +
+  geom_abline(intercept = coef(r1)[1], slope = coef(r1)[2], color = "red", linewidth = 1) +
+  labs(x = "n", y = "Tempo (s)", title = "tempo ~ n")
+ggsave("pdf_babel/a23_mmul_lin.pdf", p, width = 4.2, height = 3.6)
+#+end_src
+
+#+begin_src R :results output graphics file :file pdf_babel/a23_mmul_lin_res.pdf :exports none :tangle aula23-regressao-linear-pt-br-figs.R
+mmul$res1 <- resid(lm(tempo ~ n, data = mmul))
+p <- ggplot(mmul, aes(n, res1)) +
+  geom_hline(yintercept = 0, color = "gray40") +
+  geom_point(alpha = .4) +
+  geom_smooth(method = "loess", formula = y ~ x, se = FALSE, color = "red") +
+  labs(x = "n", y = "Resíduo (s)", title = "Resíduos de tempo ~ n")
+ggsave("pdf_babel/a23_mmul_lin_res.pdf", p, width = 4.2, height = 3.6)
+#+end_src
+
+#+begin_src R :results output graphics file :file pdf_babel/a23_mmul_cubo_x3.pdf :exports none :tangle aula23-regressao-linear-pt-br-figs.R
+r3 <- lm(tempo ~ I(n^3), data = mmul)
+p <- ggplot(mmul, aes(n^3 / 1e9, tempo)) +
+  geom_point(alpha = .4, color = "blue") +
+  geom_abline(intercept = coef(r3)[1], slope = coef(r3)[2] * 1e9, color = "red", linewidth = 1) +
+  labs(x = expression(n^3 ~ "(" * 10^9 * ")"), y = "Tempo (s)", title = "tempo ~ I(n^3)")
+ggsave("pdf_babel/a23_mmul_cubo_x3.pdf", p, width = 4.2, height = 3.6)
+#+end_src
+
+#+begin_src R :results output graphics file :file pdf_babel/a23_mmul_cubo.pdf :exports none :tangle aula23-regressao-linear-pt-br-figs.R
+nn <- data.frame(n = seq(100, 1300, by = 10))
+nn$tempo <- predict(lm(tempo ~ I(n^3), data = mmul), nn)
+p <- ggplot(mmul, aes(n, tempo)) +
+  geom_point(alpha = .4, color = "blue") +
+  geom_line(data = nn, color = "red", linewidth = 1) +
+  labs(x = "n", y = "Tempo (s)", title = "Mesmo ajuste, eixo em n")
+ggsave("pdf_babel/a23_mmul_cubo.pdf", p, width = 4.2, height = 3.6)
+#+end_src
+
+#+begin_src R :results output graphics file :file pdf_babel/a23_mmul_cubo_res.pdf :exports none :tangle aula23-regressao-linear-pt-br-figs.R
+mmul$res3 <- resid(lm(tempo ~ I(n^3), data = mmul))
+p <- ggplot(mmul, aes(n, res3)) +
+  geom_hline(yintercept = 0, color = "gray40") +
+  geom_point(alpha = .5) +
+  geom_smooth(method = "loess", formula = y ~ x, se = FALSE, color = "red") +
+  labs(x = "n", y = "Resíduo (s)", title = "Resíduos de tempo ~ I(n^3)")
+ggsave("pdf_babel/a23_mmul_cubo_res.pdf", p, width = 6, height = 3.2)
+#+end_src
+
+* O que é uma regressão?
+
+A regressão é a ferramenta estatística mais usada para *entender a
+relação entre variáveis*
+
+#+latex: \vfill\pause
+
+- *Variável resposta* \( y \): o que queremos prever/explicar (tempo, vazão, energia, ...)
+- *Variável(is) explicativa(s)* ou preditora(s) \( x \): o que controlamos
+  ou observamos (tamanho da entrada, nº de threads, frequência, ...)
+- Nesta aula: preditores *quantitativos* (operações aritméticas fazem sentido)
+
+#+latex: \vfill\pause
+
+Objetivos possíveis
+1. *Prever* observações futuras (inclusive, com cuidado, extrapolar)
+2. Avaliar o *efeito* de \( x \) sobre \( y \)
+3. *Descrever* os dados com uma equação/modelo compacto
+4. Definir o que é ``esperado'' \to detectar o que *não* se comporta como esperado
+
+* Para que serve em análise de desempenho?
+
+- *Prever*: quanto tempo leva com \( n = 4096 \)? Quantos servidores para a carga do ano que vem?
+- *Entender*: o custo cresce como \( n^2 \)? \( n^3 \)? Qual é o custo fixo (latência) e o custo por byte (banda)?
+  - Ex.: tempo de transmissão \( \approx \alpha + \beta \cdot \text{bytes} \)
+
+#+latex: \vfill\pause
+
+- *Calibrar modelos de simulação* (aulas 27--28)
+  - O simulador precisa de um modelo de custo de cada operação
+  - Ex.: no estudo do HPL com SMPI, o tempo de cada chamada =dgemm= é
+    modelado por *regressão linear* em função de \( m \cdot n \cdot k \)
+    e injetado no simulador
+
+#+latex: \vfill\pause
+
+** Regressão linear                                                 :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+- Mais simples e mais comum; base de ferramentas mais avançadas
+  (regressão polinomial, ANOVA, projetos \( 2^k \), ...)
+- *Simples*: um único preditor \( x \)
+
+* Exemplo condutor: tempo do =mmul= em função de \( n \)
+
+Programa =mmul.c= (multiplicação de matrizes \( n \times n \) por blocos, já visto na aula 22)
+
+#+latex: \vfill\pause
+
+Coleta (script =a23_coleta_mmul.sh=, dados em =a23_mmul_tempos.csv=)
+- Compilado com =gcc -O2=, bloco 32, *tempo de parede* medido com =date +%s%N=
+- \( n \in \{128, 192, 256, \dots, 1280\} \) (19 níveis, passo 64)
+- 10 réplicas de cada \( n \) \to 190 execuções, *em ordem aleatória* (=shuf=)
+- Máquina: notebook Intel Core i7-13800H (núcleos P e E), Linux,
+  *com outras tarefas rodando* (ambiente real, não controlado)
+- Total: menos de 1 minuto de execução
+
+#+latex: \vfill\pause
+
+#+begin_src bash :exports code
+for n in $(seq 128 64 1280); do
+  for rep in $(seq 1 10); do echo "$n $rep"; done
+done | shuf > plano            # ordem aleatória!
+while read -r n rep; do
+  ini=$(date +%s%N); ./mmul $n 32 > /dev/null; fim=$(date +%s%N)
+  echo "$n,$rep,$(( (fim - ini) / 1000 ))"     # (aqui em us)
+done < plano
+#+end_src
+
+* Os dados do =mmul=
+
+#+attr_latex: :width .85\linewidth
+[[file:pdf_babel/a23_mmul_dados.pdf]]
+
+- O tempo cresce com \( n \) --- mas *como*? Uma reta serve?
+- Note a *dispersão* entre réplicas: ela parece crescer com \( n \)
+
+#+latex: \vfill\pause
+
+Vamos primeiro entender *como* ajustar uma reta, com um exemplo pequeno
+
+* Um conjunto de dados simples
+
+#+latex: \begin{columns}\begin{column}{.35\linewidth}\centering
+#+begin_export latex
+\begin{tabular}{rr}
+\toprule
+$x$ & $y$ \\ \midrule
+1 & 3 \\ 2 & 1 \\ 3 & 5 \\ 5 & 2 \\ 7 & 6 \\
+9 & 4 \\ 11 & 7 \\ 13 & 9 \\ 14 & 8 \\ 15 & 5 \\ \bottomrule
+\end{tabular}
+#+end_export
+#+latex: \end{column}\begin{column}{.6\linewidth}
+#+attr_latex: :width .9\linewidth
+[[file:pdf_babel/a23_toy_pontos.pdf]]
+#+latex: \end{column}\end{columns}
+
+#+latex: \vfill
+
+Como *resumir* esta relação com uma reta \( y = b_0 + b_1 x \)?
+
+* O método ``a olho''
+
+#+latex: \begin{columns}\begin{column}{.45\linewidth}
+#+attr_latex: :width \linewidth
+[[file:pdf_babel/a23_toy_olho.pdf]]
+#+latex: \end{column}\begin{column}{.52\linewidth}
+- Traçar uma reta que passe ``pelo meio'' dos pontos
+- Equilibrando quantos pontos ficam acima e abaixo
+
+#+latex: \vfill\pause
+
+- Subjetivo: cada pessoa traça uma reta diferente
+- Alguns pontos ficam bem longe da reta
+
+#+latex: \vfill\pause
+
+\to Vamos *minimizar alguma distância* dos pontos à reta
+#+latex: \end{column}\end{columns}
+
+* Mínimos quadrados: o que minimizar?
+
+#+latex: \begin{columns}\begin{column}{.45\linewidth}
+#+attr_latex: :width \linewidth
+[[file:pdf_babel/a23_toy_mq.pdf]]
+#+latex: \end{column}\begin{column}{.52\linewidth}
+Para cada ponto, o *resíduo* (erro vertical) é
+\[ e_i = y_i - (b_0 + b_1 x_i) \]
+
+#+latex: \pause
+
+Minimizamos a *soma dos quadrados dos erros* (SSE):
+\[ SSE(b_0, b_1) = \sum_{i=1}^{N} e_i^2 \]
+#+latex: \end{column}\end{columns}
+
+#+latex: \vfill\pause
+
+- Erros grandes pesam *muito* mais que erros pequenos
+- Se todos os \( e_i \) fossem zero, a reta seria perfeita
+- Compromisso: aproximar-se de alguns pontos afasta de outros
+- Por que não \( \sum e_i \)? Erros positivos e negativos se cancelam (infinitas retas com soma zero)
+
+* Mínimos quadrados: fórmulas fechadas
+
+\( SSE \) é quadrática em \( b_0 \) e \( b_1 \): derivando e igualando a zero (Jain, cap. 14)
+
+#+begin_export latex
+\begin{align*}
+  b_1 &= \frac{\sum x_i y_i - N\,\bar{x}\,\bar{y}}{\sum x_i^2 - N\,\bar{x}^2}
+       = \frac{\sum (x_i-\bar{x})(y_i-\bar{y})}{\sum (x_i-\bar{x})^2}
+       = r_{xy}\,\frac{s_y}{s_x} \\[4pt]
+  b_0 &= \bar{y} - b_1\,\bar{x}
+\end{align*}
+#+end_export
+
+- \( N \): número de observações (cuidado: no =mmul=, \( n \) é a *ordem da matriz*!)
+- \( \bar x, \bar y \): médias; \( s_x, s_y \): desvios padrão; \( r_{xy} \): correlação
+- A reta sempre passa pelo ponto \( (\bar x, \bar y) \), e \( \sum e_i = 0 \)
+
+#+latex: \vfill\pause
+
+** No exemplo simples                                               :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+\( N = 10 \), \( \sum x = 80 \), \( \sum y = 50 \), \( \sum xy = 489 \), \( \sum x^2 = 880 \), \( \bar x = 8 \), \( \bar y = 5 \)
+\[ b_1 = \frac{489 - 10 \cdot 8 \cdot 5}{880 - 10 \cdot 8^2} = \frac{89}{240} \approx 0{,}371
+\qquad b_0 = 5 - 0{,}371 \cdot 8 \approx 2{,}03 \]
+
+* \( y \) em função de \( x \) ou \( x \) em função de \( y \)?
+
+#+latex: \begin{columns}\begin{column}{.48\linewidth}\centering
+Minimiza erros *verticais*
+
+=lm(y ~ x)=
+
+#+attr_latex: :width .95\linewidth
+[[file:pdf_babel/a23_toy_mq.pdf]]
+\( y = 2{,}03 + 0{,}371\,x \)
+#+latex: \end{column}\pause\begin{column}{.48\linewidth}\centering
+Minimiza erros *horizontais*
+
+=lm(x ~ y)=, reescrita
+
+#+attr_latex: :width .95\linewidth
+[[file:pdf_babel/a23_toy_xy.pdf]]
+\( y = -0{,}39 + 0{,}674\,x \)
+#+latex: \end{column}\end{columns}
+
+#+latex: \vfill\pause
+
+#+begin_center
+Retas *diferentes*! Mínimos quadrados não é simétrico. Há opções simétricas?
+#+end_center
+
+* Outras retas ``simétricas''
+
+#+latex: \begin{columns}\begin{column}{.48\linewidth}\centering
+*Deming* (menores distâncias ortogonais)
+#+attr_latex: :width .9\linewidth
+[[file:pdf_babel/a23_toy_deming.pdf]]
+#+latex: \end{column}\begin{column}{.48\linewidth}\centering
+*Menores retângulos*
+#+attr_latex: :width .9\linewidth
+[[file:pdf_babel/a23_toy_retangulos.pdf]]
+#+latex: \end{column}\end{columns}
+
+#+latex: \vfill\pause
+
+- Deming: equivale à 1ª componente principal (PCA); só faz sentido se
+  \( x \) e \( y \) estão na *mesma unidade* (senão, ``ortogonal'' depende da escala)
+- Retângulos: minimiza \( \sum |\Delta x_i| \cdot |\Delta y_i| \)
+  \to reta \( y = \bar y + \frac{s_y}{s_x}(x - \bar x) \);
+  útil quando nenhuma variável ``explica'' a outra
+
+* Qual reta escolher?
+
+#+attr_latex: :width .85\linewidth
+[[file:pdf_babel/a23_toy_todas.pdf]]
+
+#+latex: \pause
+
+Não é um problema geométrico: é preciso um *modelo* de onde vem o erro
+- Em desempenho, normalmente *controlamos* \( x \) (tamanho, nº de threads)
+  e *medimos* \( y \) com ruído \to erro está em \( y \) \to *mínimos quadrados* \( y \sim x \)
+
+* O modelo de regressão linear simples
+
+#+latex: \begin{columns}\begin{column}{.55\linewidth}
+Um *modelo probabilístico*:
+\[ y_i = \beta_0 + \beta_1 x_i + \varepsilon_i \]
+
+- \( y \): variável resposta (aleatória)
+- \( x \): variável explicativa (fixa, conhecida)
+- \( \beta_0 \): intercepto; \( \beta_1 \): inclinação
+- \( \varepsilon \): erro aleatório (ruído)
+
+#+latex: \end{column}\begin{column}{.43\linewidth}
+#+attr_latex: :width \linewidth
+[[file:pdf_babel/a23_modelo.pdf]]
+#+latex: \end{column}\end{columns}
+
+#+latex: \vfill\pause
+
+- \( \beta_0 + \beta_1 x \) é a ``reta verdadeira'': a *média* de \( y \) dado \( x \)
+- \( \varepsilon \) é a parte de \( y \) *não* associada a \( x \)
+- \( \beta_0, \beta_1 \) são *desconhecidos*: \( b_0, b_1 \) (mínimos quadrados) são suas *estimativas*
+  - Outra amostra \to outros \( b_0, b_1 \): eles também são variáveis aleatórias!
+
+* Hipóteses do modelo
+
+1. *\( x \) sem erro* (exogeneidade fraca): os valores de \( x \) são fixos, sem erro de medição
+   - Razoável quando \( x \) é um parâmetro que *controlamos* (\( n \) no =mmul=)
+2. *Linearidade*: \( \mathbb{E}[y \mid x] = \beta_0 + \beta_1 x \)
+   - Linear *nos parâmetros*: \( x \) pode ser transformado (\( x^2, x^3, \log x, \dots \))
+3. *Erros independentes*: \( \varepsilon_i \) não depende de \( \varepsilon_j \)
+4. *Média zero*: \( \mathbb{E}[\varepsilon_i] = 0 \)
+5. *Variância constante* (homocedasticidade): \( \mathrm{Var}(\varepsilon_i) = \sigma^2 \), a mesma para todo \( x \)
+6. *Normalidade*: \( \varepsilon_i \sim \mathcal{N}(0, \sigma^2) \)
+
+#+latex: \vfill\pause
+
+** Teorema de Gauss--Markov                                         :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+Sob 1--5, mínimos quadrados dá o *melhor estimador linear não viesado*:
+\( \mathbb{E}[b_i] = \beta_i \) e \( \mathrm{Var}(b_i) \) mínima. A normalidade (6) não é
+necessária para isso, mas é usada para construir *ICs e testes exatos*.
+
+#+latex: \pause
+#+begin_center
+Hipóteses precisam ser *verificadas* \to aula 24
+#+end_center
+
+* E se houver mais de uma variável explicativa?
+
+- O mesmo raciocínio vale para *vários* preditores (regressão linear múltipla):
+  \[ y = \beta_0 + \beta_1 x_1 + \beta_2 x_2 + \beta_{12}\, x_1 x_2 + \varepsilon \]
+- Também é linear (nos parâmetros!):
+  \[ y = \beta_0 + \beta_1 x + \beta_2 \frac{1}{x} + \beta_3 x^3 + \varepsilon \]
+
+#+latex: \vfill\pause
+
+- As fórmulas fechadas ficam matriciais: \( b = (X^\top X)^{-1} X^\top y \)
+- O R resolve tudo com a mesma função =lm()=
+
+#+latex: \vfill
+
+#+begin_center
+Fatores categóricos, interações, transformações \to aula 25
+#+end_center
+
+* Fórmulas de modelo em R
+
+#+latex: \centerline{\textbf{resposta} \texttt{\char`~} \textbf{explicativa(s)}}
+
+=~= lê-se ``é modelado em função de'': =lm(y ~ x)= \( \Leftrightarrow y = \beta_0 + \beta_1 x + \varepsilon \)
+
+#+latex: \vfill\pause
+
+No lado direito, os símbolos têm significado *diferente* da aritmética:
+- =+= inclui uma variável (não é soma); =-= remove (=y ~ x - 1=: sem intercepto)
+- =:= interação; =*= variáveis e suas interações
+- =I(...)= protege uma expressão *aritmética*: =I(n^3)= é o termo \( n^3 \)
+
+#+latex: \vfill\pause
+
+| Fórmula R                    | Modelo                                                              |
+|------------------------------+---------------------------------------------------------------------|
+| =y ~ x=                      | \( \beta_0 + \beta_1 x \)                                           |
+| =y ~ I(x^3)=                 | \( \beta_0 + \beta_1 x^3 \)                                         |
+| =z ~ x + y=                  | \( \beta_0 + \beta_1 x + \beta_2 y \)                               |
+| =z ~ x * y=                  | \( \beta_0 + \beta_1 x + \beta_2 y + \beta_3 x y \)                 |
+| =log(y) ~ log(x)=            | \( \log y = \beta_0 + \beta_1 \log x \)                             |
+
+* Primeira tentativa no =mmul=: =tempo ~ n=
+
+#+begin_src R :exports code
+d <- read.csv("a23_mmul_tempos.csv")
+r1 <- lm(tempo ~ n, data = d)
+summary(r1)
+#+end_src
+
+#+latex: \pause
+#+begin_example
+Residuals:
+     Min       1Q   Median       3Q      Max
+-0.15967 -0.07591 -0.01508  0.05303  0.46023
+
+Coefficients:
+              Estimate Std. Error t value Pr(>|t|)
+(Intercept) -2.157e-01  1.804e-02  -11.96   <2e-16
+n            6.956e-04  2.294e-05   30.32   <2e-16
+
+Residual standard error: 0.1109 on 188 degrees of freedom
+Multiple R-squared:  0.8302,	Adjusted R-squared:  0.8293
+F-statistic: 919.4 on 1 and 188 DF,  p-value: < 2.2e-16
+#+end_example
+
+#+latex: \pause
+
+- \( \widehat{\text{tempo}} = -0{,}216 + 0{,}000696\, n \) segundos
+- \( R^2 = 0{,}83 \), \( p \)-valor minúsculo... Parece bom?
+
+* Lendo a saída do =summary()=
+
+- =Estimate=: \( b_0 \) e \( b_1 \)
+- =Std. Error=: desvio padrão estimado de cada coeficiente (\( s_{b_0}, s_{b_1} \))
+- =t value= \( = \) =Estimate= / =Std. Error=; =Pr(>|t|)=: \( p \)-valor do teste \( H_0: \beta_j = 0 \)
+- =Residual standard error=: \( s_e = \sqrt{SSE / (N-2)} \), estimativa de \( \sigma \);
+  \( N - 2 = 188 \) graus de liberdade (2 parâmetros estimados)
+- =Multiple R-squared=: fração da variância de \( y \) explicada (detalhes na aula 24)
+- =F-statistic=: testa se *todos* os coeficientes (exceto o intercepto) são zero
+
+#+latex: \vfill\pause
+
+** Mas atenção                                                      :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+- Os \( p \)-valores e erros padrão *supõem* as hipóteses do modelo
+- Intercepto \( = -0{,}216 \) s: tempo *negativo* para \( n \) pequeno?! Algo está errado.
+
+* =tempo ~ n=: olhe os gráficos!
+
+#+latex: \begin{columns}\begin{column}{.5\linewidth}
+#+attr_latex: :width \linewidth
+[[file:pdf_babel/a23_mmul_lin.pdf]]
+#+latex: \end{column}\pause\begin{column}{.5\linewidth}
+#+attr_latex: :width \linewidth
+[[file:pdf_babel/a23_mmul_lin_res.pdf]]
+#+latex: \end{column}\end{columns}
+
+#+latex: \vfill
+
+- Resíduos com *padrão em U*: positivos nas pontas, negativos no meio
+- \to A relação *não é linear* em \( n \): hipótese de linearidade violada
+- Um \( R^2 \) de 0,83 *não* garante que o modelo esteja certo
+
+* Linearizar com conhecimento do domínio
+
+O algoritmo faz \( n^3 \) multiplicações-somas (três laços aninhados)
+\[ \text{tempo} \approx \beta_0 + \beta_1\, n^3 \]
+
+#+latex: \vfill\pause
+
+- Não linear em \( n \), mas *linear nos parâmetros* \( \beta_0, \beta_1 \)
+- Basta criar o preditor \( x = n^3 \): continua sendo regressão linear simples!
+
+#+begin_src R :exports code
+r3 <- lm(tempo ~ I(n^3), data = d)
+#+end_src
+
+#+latex: \vfill\pause
+
+Outras transformações comuns em desempenho
+- \( 1/x \) (ex.: tempo vs nº de processadores, lei de Amdahl)
+- \( \log y \sim \log x \) (lei de potência \( y = a x^b \); estima o expoente \( b \)) \to aula 25
+- \( x \log x \) (ordenação)
+
+#+latex: \vfill
+Melhor ainda: *teoria* (complexidade do algoritmo) guiando a escolha do modelo
+
+* =tempo ~ I(n^3)=: saída
+
+#+begin_example
+Residuals:
+     Min       1Q   Median       3Q      Max
+-0.14011 -0.03816 -0.02084  0.02542  0.38429
+
+Coefficients:
+             Estimate Std. Error t value Pr(>|t|)
+(Intercept) 3.103e-02  7.660e-03   4.051 7.45e-05
+I(n^3)      3.993e-10  8.657e-12  46.124  < 2e-16
+
+Residual standard error: 0.07666 on 188 degrees of freedom
+Multiple R-squared:  0.9188,	Adjusted R-squared:  0.9184
+F-statistic:  2127 on 1 and 188 DF,  p-value: < 2.2e-16
+#+end_example
+
+#+latex: \vfill\pause
+
+- \( \widehat{\text{tempo}} = 0{,}031 + 3{,}99 \times 10^{-10}\, n^3 \) segundos
+- \( b_1 \approx 0{,}4 \) ns por iteração do laço interno (\( \approx 2{,}5 \times 10^{9} \)
+  multiplicações-somas/s \( \approx 5 \) GFLOP/s)
+- \( b_0 \approx 31 \) ms: custo fixo (criar processo, alocar e preencher matrizes, ...)
+- \( s_e \) caiu de 0,111 para 0,077 s; \( R^2 \) subiu de 0,83 para 0,92
+
+* =tempo ~ I(n^3)=: o ajuste
+
+#+latex: \begin{columns}\begin{column}{.5\linewidth}
+#+attr_latex: :width \linewidth
+[[file:pdf_babel/a23_mmul_cubo_x3.pdf]]
+#+latex: \end{column}\begin{column}{.5\linewidth}
+#+attr_latex: :width \linewidth
+[[file:pdf_babel/a23_mmul_cubo.pdf]]
+#+latex: \end{column}\end{columns}
+
+#+latex: \vfill
+
+- À esquerda: reta no espaço transformado (\( x = n^3 \))
+- À direita: a mesma reta vista como curva em \( n \)
+- A curvatura sistemática desapareceu
+
+#+latex: \vfill\pause
+- Mas atenção: nesta faixa de \( n \), o expoente *empírico* fica abaixo de 3
+  (custos fixos e termos em \( n^2 \) pesam para \( n \) pequeno; cache para \( n \) grande)
+  \to estimaremos o expoente com \( \log(\text{tempo}) \sim \log(n) \) na aula 25
+
+* Intervalos de confiança dos coeficientes
+
+\( b_0 \) e \( b_1 \) são combinações lineares dos \( y_i \) (logo, dos \( \varepsilon_i \)) \to têm distribuição conhecida (Jain, cap. 14)
+
+#+begin_export latex
+\begin{align*}
+  s_e^2 &= \frac{SSE}{N-2} &
+  s_{b_1} &= \frac{s_e}{\sqrt{\sum x_i^2 - N \bar{x}^2}} &
+  s_{b_0} &= s_e \sqrt{\frac{1}{N} + \frac{\bar{x}^2}{\sum x_i^2 - N \bar{x}^2}}
+\end{align*}
+#+end_export
+
+\vspace{-1em}
+\[ \text{IC}_{100(1-\alpha)\%}(\beta_j):\quad b_j \mp t_{[1-\alpha/2;\ N-2]}\; s_{b_j} \]
+
+#+latex: \vfill\pause
+
+- Válido se o modelo é correto e os erros são normais (ou \( N \) grande, pelo TCL)
+- Se o IC de \( \beta_1 \) *contém zero*, não há evidência de efeito de \( x \)
+- Para reduzir \( s_{b_1} \): mais observações e \( x \) mais *espalhados*
+  (o denominador \( \sum (x_i - \bar x)^2 \) cresce) \to projeto de experimentos!
+
+* ICs no R: =confint()=
+
+#+begin_src R :exports code
+confint(r3, level = 0.95)
+#+end_src
+
+#+begin_example
+                   2.5 %       97.5 %
+(Intercept) 1.592247e-02 4.614403e-02
+I(n^3)      3.822362e-10 4.163924e-10
+#+end_example
+
+#+latex: \vfill\pause
+
+- \( \beta_0 \in [16;\ 46] \) ms: custo fixo é significativamente diferente de zero
+- \( \beta_1 \in [0{,}382;\ 0{,}416] \) ns por iteração: estimativa precisa (\( \pm 4\% \))
+
+#+latex: \vfill\pause
+
+** Exemplo simples                                                  :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+Com \( N = 10 \): \( b_1 = 0{,}371 \), \( s_{b_1} = 0{,}119 \), \( t_{[0{,}975;\,8]} = 2{,}306 \)
+\to IC 95% \( = [0{,}10;\ 0{,}64] \) (não contém zero);
+\( b_0 = 2{,}03 \pm 2{,}306 \cdot 1{,}11 = [-0{,}53;\ 4{,}6] \) (contém zero)
+
+* Podemos confiar nesses intervalos?
+
+#+attr_latex: :width .85\linewidth
+[[file:pdf_babel/a23_mmul_cubo_res.pdf]]
+
+- Sem curvatura forte, mas a *dispersão cresce com \( n \)* (heterocedasticidade)
+- Alguns pontos sistematicamente acima (ex.: \( n = 512 \) e \( n = 1024 \): potências de 2!)
+- Resíduos assimétricos (máximo \( +0{,}38 \), mínimo \( -0{,}14 \))
+
+#+latex: \pause
+#+begin_center
+*As hipóteses 3--6 precisam ser verificadas* \to aula 24
+#+end_center
+
+* Resumo
+
+- Regressão: modelar a *média* de \( y \) em função de \( x \) para prever, entender e calibrar
+- Várias retas possíveis; mínimos quadrados em \( y \) é a escolha quando
+  \( x \) é controlado e o ruído está em \( y \)
+- \( b_1 = \frac{\sum x y - N \bar x \bar y}{\sum x^2 - N \bar x^2} \), \( b_0 = \bar y - b_1 \bar x \)
+- Modelo \( y = \beta_0 + \beta_1 x + \varepsilon \) com hipóteses sobre \( \varepsilon \):
+  independentes, média zero, variância constante, normais; \( x \) sem erro
+
+#+latex: \vfill\pause
+
+- Em R: =lm()=, =summary()=, =confint()=
+- *Linear nos parâmetros*: transformar \( x \) (ex.: \( n^3 \)) usando conhecimento do domínio
+- =mmul=: =tempo ~ n= tem \( R^2 = 0{,}83 \) mas está *errado*;
+  =tempo ~ I(n^3)= é muito melhor (\( R^2 = 0{,}92 \)), mas há sinais de heterocedasticidade
+
+#+latex: \vfill\pause
+
+#+begin_center
+Próxima aula: diagnóstico, \( R^2 \), predição
+#+end_center
+
+* Referências
+
+- Raj Jain. *The Art of Computer Systems Performance Analysis*. Wiley, 1991.
+  - Cap. 14: /Simple Linear Regression Models/
+- Arnaud Legrand, Jean-Marc Vincent. Slides do curso /Scientific
+  Methodology and Performance Evaluation/ (SMPE), Univ. Grenoble Alpes:
+  /Linear Regression/ (adaptados e traduzidos)
+- F. J. Anscombe. Graphs in Statistical Analysis. /The American Statistician/, 27(1), 1973.
+- Dados do =mmul=: coletados para esta aula (=a23_coleta_mmul.sh=, =a23_mmul_tempos.csv=)
