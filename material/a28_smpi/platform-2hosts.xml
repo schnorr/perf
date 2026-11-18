@@ -1,0 +1,10 @@
+<?xml version='1.0'?>
+<!DOCTYPE platform SYSTEM "https://simgrid.org/simgrid.dtd">
+<platform version="4.1">
+  <zone id="z" routing="Full">
+    <host id="h0" speed="1Gf"/>
+    <host id="h1" speed="1Gf"/>
+    <link id="l" bandwidth="10GBps" latency="10us"/>
+    <route src="h0" dst="h1"><link_ctn id="l"/></route>
+  </zone>
+</platform>
