@@ -1,0 +1,966 @@
+# -*- coding: utf-8 -*-
+# -*- mode: org -*-
+#+startup: beamer overview indent
+#+LANGUAGE: pt-br
+#+TAGS: noexport(n)
+#+EXPORT_EXCLUDE_TAGS: noexport
+#+EXPORT_SELECT_TAGS: export
+
+#+Title: Análise de Desempenho de Sist. Comp.
+#+SubTitle: Introdução à Simulação e Análise de Resultados
+#+Author: Prof. Lucas Mello Schnorr
+#+Date: \copyleft
+
+#+LaTeX_CLASS: beamer
+#+LaTeX_CLASS_OPTIONS: [xcolor=dvipsnames,10pt]
+#+OPTIONS: H:1 num:t toc:nil \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+#+LATEX_HEADER: \input{org-babel.tex}
+
+* Por que simular?
+
+- Simulação é uma das três técnicas de avaliação de desempenho
+  - Modelagem analítica, *simulação* e medição
+- Útil quando
+  - O sistema real não está disponível (ainda em projeto, caro demais)
+  - Muitas cargas/ambientes/alternativas precisam ser testados
+  - O modelo analítico exige hipóteses irrealistas
+
+#+latex: \vfill\pause
+
+- Apesar da utilidade, muitos projetos de simulação fracassam
+  - Ou produzem resultados enganosos
+  - Desequilíbrio frequente: boa engenharia de software e estatística
+    fraca (ou o contrário)
+  - Simulações grandes demoram muito mais do que o previsto
+
+#+latex: \vfill\pause
+
+** Agenda                                                          :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+1. Erros comuns, terminologia e tipos de simulação
+2. Estrutura de um simulador de eventos discretos + prática M/M/1 em R
+3. Análise de resultados: verificação, validação, transiente, critérios
+   de parada (réplicas independentes, médias em lotes)
+
+* Erros comuns (1/3)
+
+** Nível de detalhe inadequado                                     :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+- Mais detalhe \Rightarrow mais tempo de desenvolvimento, mais bugs, execução mais lenta
+- Modelo detalhado exige dados de entrada detalhados
+  - Ex.: disco -- tempo de serviço exponencial vs. simular cabeça e rotação
+    sem conhecer os setores acessados (gera setores aleatórios\dots)
+- *Comece simples*, analise a sensibilidade, refine só onde importa
+
+#+latex: \vfill\pause
+
+** Linguagem inadequada                                            :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+- Linguagens/bibliotecas de simulação: desenvolvimento rápido, trace e
+  estatísticas prontos
+- Linguagens de propósito geral: portabilidade e controle de desempenho
+- Hoje: núcleo compilado (rápido) + API em linguagem de script (ex.: SimGrid)
+
+* Erros comuns (2/3)
+
+** Modelos não verificados e inválidos                             :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+- Bugs tornam as conclusões sem sentido
+- Código correto pode ser inválido: hipóteses erradas sobre o sistema
+- Desconfie dos resultados até que sejam confrontados com teoria,
+  medições e intuição de especialistas
+
+#+latex: \vfill\pause
+
+** Simulações curtas demais                                        :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+- Resultados dominados pelas *condições iniciais* (não pelo regime permanente)
+- O comprimento necessário depende da precisão desejada e da variância da métrica
+- Estatística ``ingênua'' falha: observações *autocorrelacionadas*
+  - Remoção do aquecimento + médias em lotes (\textit{batching}) + observação
+    suficientemente longa
+
+* Erros comuns (3/3)
+
+** Geradores aleatórios ruins                                      :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+- Geradores caseiros/fracos introduzem viés
+- Use geradores testados de bibliotecas confiáveis (o padrão do R é o
+  Mersenne-Twister)
+
+#+latex: \vfill\pause
+
+** Escolha inadequada de sementes                                  :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+- Reusar sementes entre réplicas \Rightarrow fluxos correlacionados
+  (ou idênticos!)
+- Sementes distintas para cada réplica / fluxo; *registre-as* para
+  reprodutibilidade (=set.seed()=)
+
+* Terminologia
+
+- *Variáveis de estado* (definem o estado) e *eventos* (mudam o estado)
+
+#+latex: \vfill\pause
+
+- Tempo contínuo vs. tempo discreto
+  - Estado definido em todo instante vs. só em instantes específicos
+- Estado contínuo vs. estado discreto
+  - Ex.: tempo gasto estudando vs. nº de jobs na fila da CPU
+  - Modelos de estado discreto = *modelos de eventos discretos*
+  - Continuidade do tempo não implica continuidade do estado (4 combinações)
+
+#+latex: \vfill\pause
+
+- Determinístico vs. probabilístico
+  - Mesma entrada \Rightarrow mesma saída vs. saídas diferentes
+- Estático vs. dinâmico
+  - O tempo não aparece vs. o estado evolui com o tempo
+- Linear vs. não linear
+- Aberto vs. fechado
+  - Entrada externa independente vs. jobs circulam dentro do sistema
+
+* Tipos de simulação (1/2)
+
+** Emulação                                                        :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+- Hardware/firmware (ou software) que imita outro sistema
+- Ex.: emulador de terminal, de processador; questões de projeto de hardware
+
+#+latex: \pause
+
+** Monte Carlo                                                     :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+- Estática (sem eixo do tempo); fenômenos probabilísticos com números
+  pseudoaleatórios
+- Também estima expressões não probabilísticas (ex.: integrais, \(\pi\))
+
+* Tipos de simulação (2/2)
+
+** Dirigida por traço (\textit{trace-driven})                      :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+- Entrada: traço registrado no sistema real (paginação, cache, escalonamento)
+- Cuidado: o traço deve ser *independente* do sistema estudado
+  - Traço de faltas de página depende da política de substituição \to
+    para estudar outra política, é preciso o traço de páginas *referenciadas*
+
+#+latex: \pause
+
+** Eventos discretos (DES)                                         :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+- Modelo de estado discreto; tempo pode ser discreto ou contínuo
+- Foco desta aula (e do SimGrid, nas aulas 27--28)
+
+* Estrutura de um simulador de eventos discretos (1/2)
+
+Todo DES compartilha uma arquitetura comum
+
+#+latex: \vfill
+
+** Escalonador de eventos                                          :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+- Mantém a *lista de eventos* futuros, ordenada por tempo
+- Operações: agendar evento X no tempo T; adiar X por \(\Delta t\);
+  cancelar; suspender indefinidamente; reativar
+- É o componente executado com mais frequência (antes de cada evento)
+  - Estrutura de dados importa: lista ligada, \textit{heap}, \textit{calendar queue}
+
+#+latex: \vfill\pause
+
+** Relógio da simulação e avanço do tempo                          :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+- Variável global com o tempo *simulado* (\(\neq\) tempo de parede!)
+- Avanço por *unidade de tempo*: incrementa \(\Delta t\) e verifica se há eventos
+- Avanço *dirigido por eventos*: salta direto para o próximo evento
+  - Padrão em simulação de sistemas computacionais
+
+* Estrutura de um simulador de eventos discretos (2/2)
+
+- *Inicialização*: estado inicial do sistema; sementes/fluxos aleatórios
+- *Variáveis de estado*: nº de jobs na fila, nº de fluxos num enlace, \dots
+- *Rotinas de evento*: uma por tipo de evento (chegada, partida, \dots)
+  - Atualizam o estado e agendam novos eventos
+- *Gerador de relatório*: calcula e imprime os resultados ao final
+- *Rotinas de trace*: imprimem variáveis intermediárias
+  - Essenciais para depurar; desligáveis em produção
+- *Programa principal*: lê entradas, inicializa, itera, gera relatório
+
+#+latex: \vfill\pause
+
+** Laço principal (pseudocódigo)                                   :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+#+begin_src text :exports code
+inicializa(estado, relógio = 0, lista_eventos, sementes)
+enquanto (não terminou):
+    ev      <- remove_próximo(lista_eventos)     # escalonador
+    relógio <- ev.tempo                          # avança o relógio
+    rotina[ev.tipo](estado, lista_eventos)       # atualiza estado, agenda eventos
+    se (trace): imprime(relógio, ev, estado)
+relatório(estatísticas)
+#+end_src
+
+* Exemplo: fila de servidor único (M/M/1)
+
+#+begin_center
+chegadas \(\xrightarrow{\ \lambda\ }\) [ fila FIFO | servidor ] \(\xrightarrow{\ \mu\ }\) partidas
+#+end_center
+
+- Intervalos entre chegadas \(\sim \mathrm{Exp}(\lambda)\); tempos de serviço \(\sim \mathrm{Exp}(\mu)\)
+- *Estado*: \(N\) = nº de clientes no sistema (fila + servidor)
+- *Eventos*: chegada e partida
+
+#+latex: \vfill\pause
+
+** Rotinas de evento                                               :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+- *Chegada*: \(N \leftarrow N+1\); agenda próxima chegada em
+  \(t + \mathrm{Exp}(\lambda)\); se o servidor estava livre (\(N=1\)),
+  agenda partida em \(t + \mathrm{Exp}(\mu)\)
+- *Partida*: \(N \leftarrow N-1\); registra o tempo de resposta do cliente; se
+  \(N>0\), agenda a próxima partida, senão partida \(=\infty\)
+
+#+latex: \vfill\pause
+
+** Resultados teóricos (regime permanente, \(\rho < 1\))           :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+\[
+\rho = \frac{\lambda}{\mu}, \qquad
+\mathbb{E}[N] = \frac{\rho}{1-\rho}, \qquad
+\mathbb{E}[T] = \frac{1}{\mu-\lambda} \quad (\text{Lei de Little: } \mathbb{E}[N] = \lambda\, \mathbb{E}[T])
+\]
+
+* Passo a passo: lista de eventos e relógio
+
+\(\lambda = 0{,}8\), \(\mu = 1\), semente 1 -- saída real do =trace= de =a26_mm1.R=
+
+#+latex: \vfill
+
+#+latex: {\footnotesize
+#+attr_latex: :align rrlcrrl
+|---+---------+---------+-------+-------------+-------------+-------------------------------|
+| # | relógio | evento  | \(N\) | próx. cheg. | próx. part. | ação                          |
+|---+---------+---------+-------+-------------+-------------+-------------------------------|
+| 1 |   0,944 | chegada |     1 |       2,421 |       1,090 | livre: cl. 1 inicia serviço   |
+| 2 |   1,090 | partida |     0 |       2,421 |  \(\infty\) | cl. 1 sai (\(T=0{,}146\))     |
+| 3 |   2,421 | chegada |     1 |       2,596 |       2,857 | livre: cl. 2 inicia serviço   |
+| 4 |   2,596 | chegada |     2 |       6,214 |       2,857 | ocupado: cl. 3 espera         |
+| 5 |   2,857 | partida |     1 |       6,214 |       4,087 | cl. 2 sai; cl. 3 inicia       |
+| 6 |   4,087 | partida |     0 |       6,214 |  \(\infty\) | cl. 3 sai (\(T=1{,}491\))     |
+| 7 |   6,214 | chegada |     1 |       6,889 |       7,171 | livre: cl. 4 inicia serviço   |
+| 8 |   6,889 | chegada |     2 |       7,073 |       7,171 | ocupado: cl. 5 espera         |
+|---+---------+---------+-------+-------------+-------------+-------------------------------|
+#+latex: }
+
+#+latex: \vfill
+
+- O relógio *salta* de evento em evento (sem passos fixos)
+- Cliente 3: chegou em 2,596, esperou até 2,857, saiu em 4,087
+  \Rightarrow \(T = 1{,}491\) (espera 0,261 + serviço 1,230)
+- \(N\) só muda nos eventos \Rightarrow \(\bar N = \frac{1}{t}\int_0^t N(s)\,ds\) é uma soma de retângulos
+
+* Prática: =a26_mm1.R= -- inicialização e estado
+
+#+begin_src R :exports code
+mm1_sim <- function(lambda, mu, n_clientes, semente = NULL, trace = FALSE) {
+  if (!is.null(semente)) set.seed(semente)       # inicialização: gerador
+  relogio <- 0                                    # relógio da simulação
+  fila    <- numeric(0)   # estado: instantes de chegada de quem está no sistema
+  prox    <- c(chegada = rexp(1, lambda),         # lista de eventos:
+               partida = Inf)                     #   servidor vazio
+  area_N  <- 0            # integral de N(t) dt (para o N médio)
+  inicio  <- 0            # início do serviço do cliente na frente da fila
+  r_cheg <- r_ini <- r_part <- numeric(n_clientes) # saída (pré-alocada)
+  k <- 0                                          # nº de partidas
+  ...
+#+end_src
+
+#+latex: \vfill
+
+- Só dois tipos de evento \Rightarrow a ``lista de eventos'' é um vetor nomeado
+  com o próximo instante de cada tipo; o escalonador é =which.min()=
+- Em simuladores gerais: fila de prioridade (\textit{heap}) de eventos
+- \(N\) = =length(fila)=; guardamos os instantes de chegada para calcular
+  o tempo de resposta na partida
+
+* Prática: =a26_mm1.R= -- laço principal e rotinas de evento
+
+#+begin_src R :exports code
+  while (k < n_clientes) {
+    ev <- names(which.min(prox))                  # escalonador: próximo evento
+    area_N  <- area_N + length(fila) * (prox[[ev]] - relogio)
+    relogio <- prox[[ev]]                         # avança o relógio
+    if (ev == "chegada") {                        # --- rotina de chegada
+      fila <- c(fila, relogio)                    # entra no sistema
+      prox["chegada"] <- relogio + rexp(1, lambda)
+      if (length(fila) == 1) {                    # servidor estava livre
+        inicio <- relogio; prox["partida"] <- relogio + rexp(1, mu) }
+    } else {                                      # --- rotina de partida
+      k <- k + 1
+      r_cheg[k] <- fila[1]; r_ini[k] <- inicio; r_part[k] <- relogio
+      fila <- fila[-1]                            # sai do sistema (FIFO)
+      if (length(fila) > 0) { inicio <- relogio; prox["partida"] <- relogio + rexp(1, mu) }
+      else prox["partida"] <- Inf }
+  }
+#+end_src
+
+- Ao final (relatório): =data.frame= com =chegada=, =inicio=, =partida=,
+  =resposta= de cada cliente e o atributo =N_medio= \(= \texttt{area\_N}/\texttt{relogio}\)
+
+* Prática: usando o simulador
+
+#+begin_src R :exports code
+source("a26_mm1.R")
+d <- mm1_sim(lambda = 0.8, mu = 1, n_clientes = 4, semente = 1, trace = TRUE)
+#+end_src
+
+#+begin_src text :exports code
+t=  0.944 chegada  N=1  prox.chegada=  2.421  prox.partida=  1.090
+t=  1.090 partida  N=0  prox.chegada=  2.421  prox.partida=    Inf
+t=  2.421 chegada  N=1  prox.chegada=  2.596  prox.partida=  2.857
+...
+#+end_src
+
+#+latex: \pause
+
+#+begin_src R :exports code
+d <- mm1_sim(lambda = 0.8, mu = 1, n_clientes = 100000, semente = 42)
+mean(d$resposta)      # 4.886   (teoria: 1/(1 - 0.8) = 5)
+attr(d, "N_medio")    # 3.908   (teoria: 0.8/0.2     = 4)
+#+end_src
+
+#+latex: \vfill\pause
+
+- Perto, mas não igual. *Isso está certo?* Quão perto deveria estar?
+  - Uma única execução é *uma* observação \Rightarrow precisamos de ICs (aulas 20--22)
+- \(10^5\) clientes em \(\approx 0{,}4\) s neste notebook (R interpretado)
+
+#+begin_src R :exports none :tangle aula26-simulacao-pt-br-figs.R
+# Gerado a partir de aula26-simulacao-pt-br.org -- rode a partir de material/
+suppressMessages({library(ggplot2); library(dplyr); library(tidyr); library(patchwork)})
+source("a26_mm1.R")
+theme_set(theme_bw(base_size = 14))
+# IC t-Student para a média de um vetor de observações (supostamente independentes)
+ic <- function(x, conf = 0.95) {
+  n <- length(x); m <- mean(x); h <- qt(1 - (1 - conf)/2, n - 1) * sd(x) / sqrt(n)
+  c(media = m, inf = m - h, sup = m + h)
+}
+#+end_src
+
+* Verificação do modelo (Jain, cap. 25)
+
+#+latex: \begin{center}
+*Verificação*: o programa implementa corretamente o modelo? (depuração)
+
+*Validação*: o modelo representa o sistema real? (hipóteses)
+#+latex: \end{center}
+
+#+latex: \vfill\pause
+
+** Técnicas de verificação                                         :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+#+latex: \begin{columns}[T]\begin{column}{.48\linewidth}
+- Projeto modular \textit{top-down}
+- \textit{Antibugging}: checagens de consistência no código
+  (ex.: \(N \geq 0\), nº de chegadas \(=\) partidas \(+ N\))
+- Revisão estruturada (\textit{walk-through})
+- Modelos determinísticos (resultado conhecido)
+- Casos simplificados (1 cliente, só chegadas)
+- \textit{Trace} e visualização \textit{on-line}
+#+latex: \end{column}\begin{column}{.48\linewidth}
+- Teste de *continuidade*: pequena mudança na entrada \(\Rightarrow\) pequena
+  mudança na saída
+- Teste de *degenerescência*: valores extremos (\(\lambda \to 0\), \(\rho \to 1\))
+- Teste de *consistência*: cenários equivalentes dão o mesmo resultado
+  (ex.: 2 servidores de vel. 1 vs. 1 de vel. 2 com carga leve)
+- *Independência da semente*: resultados não podem depender da semente
+#+latex: \end{column}\end{columns}
+
+#+latex: \vfill\pause
+
+- E, quando existe: *comparar com a teoria* (nosso caso: M/M/1)
+
+* Verificação contra a teoria: experimento
+
+- \(\mu = 1\); \(\rho \in \{0{,}5;\ 0{,}8;\ 0{,}9\}\)
+- \(m=10\) réplicas independentes (sementes distintas), \(22.000\) clientes cada
+- Descartamos os 2.000 primeiros clientes (aquecimento, ver adiante)
+- Média de cada réplica \(\Rightarrow\) IC 95% (t de Student, 9 g.l.)
+
+#+latex: \vfill\pause
+
+#+latex: {\small
+#+attr_latex: :align rrcrc
+|------------+-----------------+-------------------------+-----------------+------------------------|
+| \(\rho\)   | \(\mathbb{E}[T]\) teórico | \(\bar T\) simulado [IC 95%] | \(\mathbb{E}[N]\) teórico | \(\bar N\) simulado [IC 95%] |
+|------------+-----------------+-------------------------+-----------------+------------------------|
+| 0,5        | 2               | 2,03 [2,00; 2,06]       | 1               | 1,01 [1,00; 1,03]       |
+| 0,8        | 5               | 4,91 [4,76; 5,05]       | 4               | 3,98 [3,87; 4,08]       |
+| 0,9        | 10              | *9,48 [9,03; 9,92]*     | 9               | *8,52 [8,03; 9,02]*     |
+|------------+-----------------+-------------------------+-----------------+------------------------|
+#+latex: }{\footnotesize
+(\(\bar N\): média no tempo sobre a execução inteira, incluindo o aquecimento)
+#+latex: }
+
+#+latex: \vfill\pause
+
+- \(\rho = 0{,}5\) e \(0{,}8\): ICs contêm o valor teórico
+- \(\rho = 0{,}9\): o IC *não* contém 10! Bug no simulador?
+  - Um IC de 95% *erra* em 5% dos casos (1 em 20) -- pode ser azar
+  - Teste: 500 réplicas independentes com \(\rho=0{,}9\) \Rightarrow
+    média geral 10,05; ICs de 10 réplicas contêm 10 em 96% dos casos
+  - Conclusão: sem evidência de bug; foi um dos 5%
+- Note também: a largura do IC *cresce muito* com \(\rho\)
+
+#+begin_src R :results output graphics file :file pdf_babel/a26_verif.pdf :exports none :tangle aula26-simulacao-pt-br-figs.R
+## Verificação: m = 10 réplicas para cada rho, comparação com a teoria
+rhos <- c(0.5, 0.8, 0.9)
+ver <- bind_rows(lapply(rhos, function(rho) {
+  r <- sapply(1:10, function(i) {
+    d <- mm1_sim(rho, 1, 22000, semente = 1000 * rho * 10 + i)
+    c(T = mean(d$resposta[-(1:2000)]), N = attr(d, "N_medio"))
+  })
+  bind_rows(data.frame(rho = rho, metrica = "T", teo = 1/(1 - rho), t(ic(r["T", ]))),
+            data.frame(rho = rho, metrica = "N", teo = rho/(1 - rho), t(ic(r["N", ]))))
+}))
+print(ver, digits = 4)
+curva <- bind_rows(data.frame(rho = seq(0.45, 0.92, by = 0.005)) %>% mutate(metrica = "T", y = 1/(1 - rho)),
+                   data.frame(rho = seq(0.45, 0.92, by = 0.005)) %>% mutate(metrica = "N", y = rho/(1 - rho)))
+g <- ggplot(ver, aes(x = rho)) +
+  geom_line(data = curva, aes(y = y), colour = "grey50") +
+  geom_errorbar(aes(ymin = inf, ymax = sup), width = 0.015, colour = "blue") +
+  geom_point(aes(y = media), colour = "blue") +
+  geom_point(aes(y = teo), shape = 4, size = 3) +
+  facet_wrap(~ factor(metrica, levels = c("T", "N"),
+                      labels = c("Tempo de resposta médio", "Nº médio no sistema")),
+             scales = "free_y") +
+  labs(x = expression(rho == lambda/mu), y = NULL)
+ggsave("pdf_babel/a26_verif.pdf", g, width = 8, height = 3.6)
+#+end_src
+
+#+begin_src R :results output :exports none :tangle aula26-simulacao-pt-br-figs.R
+## rho = 0.9: o IC de 10 réplicas não contém 10. Azar ou bug? 500 réplicas (~40 s)
+m500 <- sapply(1:500, function(i) mean(mm1_sim(0.9, 1, 22000, semente = 70000 + i)$resposta[-(1:2000)]))
+cob10 <- apply(matrix(m500, nrow = 10), 2, function(x) { v <- ic(x); v[["inf"]] <= 10 & v[["sup"]] >= 10 })
+cat(sprintf("rho=0.9: média de 500 réplicas = %.3f; cobertura dos ICs com m=10: %.2f\n", mean(m500), mean(cob10)))
+#+end_src
+
+* Verificação contra a teoria: figura
+
+#+attr_latex: :width \linewidth
+[[file:pdf_babel/a26_verif.pdf]]
+
+- Curva cinza: teoria; \texttt{x}: valor teórico; azul: média e IC 95%
+  de 10 réplicas
+- Mais testes possíveis: tempo de resposta \(T \sim \mathrm{Exp}(\mu-\lambda)\)
+  (qqplot), Lei de Little \(\bar N \approx \lambda \bar T\), \(\lambda \to 0\)
+  \Rightarrow \(\bar T \to 1/\mu\)
+
+* Validação do modelo (Jain, cap. 25)
+
+Três *aspectos* a validar
+1. Hipóteses do modelo (ex.: chegadas são mesmo Poisson? FIFO?)
+2. Valores e distribuições dos parâmetros de entrada
+3. Valores de saída e conclusões
+
+#+latex: \vfill\pause
+
+Três *fontes* de comparação
+#+attr_latex: :align >{\raggedright}p{.3\linewidth}p{.62\linewidth}
+|-------------------------+-----------------------------------------------------------|
+| Intuição de especialistas | Apresentar hipóteses/resultados a quem conhece o sistema; pedir que distinguam saídas reais de simuladas |
+| Medições do sistema real  | A mais confiável; comparar distribuições, não só médias (testes, qqplot, ICs) |
+| Resultados teóricos       | Modelos analíticos em casos simplificados (ex.: M/M/1); validam o simulador e vice-versa |
+|-------------------------+-----------------------------------------------------------|
+
+#+latex: \vfill\pause
+
+- Validação completa é impossível: aumenta-se a *confiança* no modelo
+- O modelo só é válido para o domínio em que foi validado
+- Aula 28: validação do SimGrid/SMPI com HPL real (simulado vs. medido com ICs)
+
+* Regime transiente: o problema
+
+#+attr_latex: :width .95\linewidth
+[[file:pdf_babel/a26_trajetoria.pdf]]
+
+- Tempos de resposta de clientes consecutivos (\(\rho=0{,}9\), semente 7)
+- Começamos com o sistema *vazio* (estado atípico); longos períodos acima/abaixo da média
+- Observações *não são independentes*: cliente \(i\) espera pelos que estão à frente
+
+#+begin_src R :results output graphics file :file pdf_babel/a26_trajetoria.pdf :exports none :tangle aula26-simulacao-pt-br-figs.R
+## Trajetória dos tempos de resposta, rho = 0.5 e 0.9
+traj <- bind_rows(lapply(c(0.5, 0.9), function(rho) {
+  d <- mm1_sim(rho, 1, 5000, semente = 7)
+  data.frame(rho = paste("rho ==", rho), id = d$id, resposta = d$resposta, teo = 1/(1 - rho))
+}))
+g <- ggplot(traj, aes(x = id, y = resposta)) +
+  geom_line(linewidth = 0.2, colour = "grey30") +
+  geom_hline(aes(yintercept = teo), colour = "red", linetype = "dashed") +
+  facet_wrap(~ rho, ncol = 2, labeller = label_parsed) +
+  labs(x = "Cliente (ordem de chegada)", y = "Tempo de resposta")
+ggsave("pdf_babel/a26_trajetoria.pdf", g, width = 9, height = 3.2)
+#+end_src
+
+* Regime transiente: média acumulada e efeito da semente
+
+#+attr_latex: :width .9\linewidth
+[[file:pdf_babel/a26_transiente.pdf]]
+
+- \(\rho=0{,}9\), 5 sementes; média acumulada \(\bar T_i = \frac{1}{i}\sum_{j\le i} T_j\);
+  tracejado: \(\mathbb{E}[T]=10\)
+- Início: viés para baixo (sistema vazio); estabiliza *lentamente*
+- A semente muda muito o resultado de uma execução curta
+  \Rightarrow uma única execução nunca basta
+
+#+begin_src R :results output graphics file :file pdf_babel/a26_transiente.pdf :exports none :tangle aula26-simulacao-pt-br-figs.R
+## Média acumulada para 5 sementes, rho = 0.9
+acum <- bind_rows(lapply(1:5, function(s) {
+  d <- mm1_sim(0.9, 1, 50000, semente = s)
+  data.frame(semente = factor(s), id = d$id, media = cumsum(d$resposta) / d$id)
+}))
+g <- ggplot(acum %>% filter(id %% 10 == 0), aes(x = id, y = media, colour = semente)) +
+  geom_line() +
+  geom_hline(yintercept = 10, linetype = "dashed") +
+  scale_x_log10(breaks = 10^(1:5), labels = scales::label_number(big.mark = ".", decimal.mark = ",")) +
+  labs(x = "Nº de clientes (escala log)", y = "Média acumulada de T", colour = "Semente")
+ggsave("pdf_babel/a26_transiente.pdf", g, width = 8, height = 3.4)
+#+end_src
+
+* Remoção do transiente (Jain, cap. 25)
+
+Em geral não se sabe onde o transiente termina \Rightarrow métodos heurísticos
+
+#+latex: \vfill
+
+1. *Execuções longas*: o transiente fica diluído (desperdício, sem garantia)
+2. *Inicialização adequada*: começar num estado próximo do permanente
+3. *Truncamento*: descartar até a observação \(l\) deixar de ser o mín./máx.
+   do restante
+4. *Remoção de dados iniciais*: descartar \(l\) observações e ver se a média
+   do restante muda
+5. *Média móvel de réplicas independentes* (método de Welch)
+6. *Médias em lotes*: ver se a média do 1º lote destoa das demais
+
+#+latex: \vfill\pause
+
+** Método de Welch (média móvel de réplicas)                       :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+1. Faça \(m\) réplicas de comprimento \(n\); calcule a média *entre réplicas*
+   de cada observação: \(\bar x_j = \frac{1}{m}\sum_{i=1}^m x_{ij}\)
+2. Suavize \(\bar x_j\) com uma média móvel de janela \(2w+1\)
+3. Escolha \(l\) onde a curva suavizada se estabiliza (inspeção visual);
+   aumente \(w\) se ainda estiver ruidosa
+
+* Remoção do transiente: método de Welch na prática
+
+#+attr_latex: :width .9\linewidth
+[[file:pdf_babel/a26_welch.pdf]]
+
+- \(\rho=0{,}9\), \(m=200\) réplicas de 3.000 clientes, janelas \(w=10\) e \(w=100\)
+- A curva suavizada atinge o patamar \(\approx 10\) em torno de
+  \(l \approx 300\)--500 clientes; depois só oscila em torno de 10
+- Por segurança, descartamos \(l = 2.000\) (custo pequeno frente a 20.000
+  observações úteis por réplica)
+- Poucas réplicas \Rightarrow curva ruidosa: aumente \(m\) ou \(w\)
+
+#+begin_src R :results output graphics file :file pdf_babel/a26_welch.pdf :exports none :tangle aula26-simulacao-pt-br-figs.R
+## Método de Welch: média entre m réplicas de cada observação + média móvel
+m <- 200; n <- 3000
+X <- sapply(1:m, function(i) mm1_sim(0.9, 1, n, semente = 200 + i)$resposta)  # n x m
+xbar <- rowMeans(X)
+movel <- function(x, w) {        # média móvel centrada de janela 2w+1 (encolhe nas bordas)
+  sapply(seq_along(x), function(j) { a <- max(1, j - w); b <- min(length(x), j + w); mean(x[a:b]) })
+}
+welch <- bind_rows(data.frame(id = 1:n, valor = xbar, curva = "média entre réplicas"),
+                   data.frame(id = 1:n, valor = movel(xbar, 10), curva = "w = 10"),
+                   data.frame(id = 1:n, valor = movel(xbar, 100), curva = "w = 100"))
+g <- ggplot(welch, aes(x = id, y = valor, colour = curva, linewidth = curva)) +
+  geom_line() +
+  geom_hline(yintercept = 10, linetype = "dashed") +
+  scale_colour_manual(values = c("grey75", "blue", "red")) +
+  scale_linewidth_manual(values = c(0.3, 0.5, 1)) +
+  labs(x = "Índice do cliente j", y = "Tempo de resposta", colour = NULL, linewidth = NULL) +
+  theme(legend.position = "top")
+ggsave("pdf_babel/a26_welch.pdf", g, width = 8, height = 3.6)
+#+end_src
+
+* Simulações terminais vs. de regime permanente
+
+- *Regime permanente*: interessa o comportamento ``para sempre''
+  (servidor web operando continuamente) \Rightarrow remover transiente
+- *Terminais*: o próprio transiente é o objeto de estudo
+  - Sistema que é desligado/reiniciado; janela de tempo fixa
+    (ex.: expediente de um banco; execução de um job/aplicação paralela)
+  - *Não* se remove o transiente; o estado inicial faz parte do modelo
+  - Réplicas independentes com as mesmas condições iniciais
+
+#+latex: \vfill\pause
+
+** Cuidados com as condições finais                               :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+- Ao parar no tempo \(t_{\max}\), clientes ainda no sistema não têm tempo de
+  resposta \Rightarrow incluí-los ou não introduz viés
+- Médias no tempo (ex.: \(\bar N\)) vs. médias por cliente (ex.: \(\bar T\)):
+  definir com cuidado sobre qual intervalo se calcula
+
+#+latex: \vfill\pause
+
+- Aulas 27--28: simular a execução de uma aplicação (mestre--trabalhadores, HPL)
+  é, essencialmente, uma simulação *terminal* \Rightarrow réplicas independentes
+
+* Critério de parada: quão longa deve ser a simulação?
+
+- Rodar até que o IC da média tenha a largura desejada
+  - Ex.: \(\bar T \pm 5\%\) com 95% de confiança
+- Precisamos da *variância da média* \(\mathrm{Var}(\bar x)\)
+
+#+latex: \vfill\pause
+
+** A armadilha: observações autocorrelacionadas                  :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+- IC ``ingênuo'': \(\bar x \pm t_{1-\alpha/2;\,n-1}\, s/\sqrt{n}\) supõe
+  observações *independentes*
+- Com correlação positiva, \(\mathrm{Var}(\bar x) \gg s^2/n\)
+  \[ \mathrm{Var}(\bar x) = \frac{\sigma^2}{n}\Big[1 + 2\sum_{k=1}^{n-1}\Big(1-\frac{k}{n}\Big)\rho_k\Big] \]
+  \Rightarrow IC ingênuo *estreito demais*: falsa precisão!
+
+#+latex: \vfill\pause
+
+** Três soluções (Jain, cap. 25)                                   :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+1. Réplicas independentes
+2. Médias em lotes (\textit{batch means})
+3. Método da regeneração
+
+* Autocorrelação dos tempos de resposta
+
+#+attr_latex: :width \linewidth
+[[file:pdf_babel/a26_acf.pdf]]
+
+- \(\rho=0{,}8\), uma execução de \(2 \times 10^5\) clientes (após descartar 2.000)
+- Esquerda: autocorrelação ainda \(> 0{,}2\) após 100 clientes!
+- Direita: correlação entre médias de lotes *consecutivos*, em função do tamanho
+  do lote \Rightarrow a partir de \(\approx 500\)--1.000 clientes por lote, as médias
+  são quase independentes (para lotes enormes há poucos lotes: estimativa ruidosa)
+
+#+begin_src R :results output graphics file :file pdf_babel/a26_acf.pdf :exports none :tangle aula26-simulacao-pt-br-figs.R
+## ACF das observações e autocorrelação lag-1 das médias de lote vs tamanho do lote
+x <- mm1_sim(0.8, 1, 202000, semente = 99)$resposta[-(1:2000)]
+a <- acf(x, lag.max = 400, plot = FALSE)
+g1 <- ggplot(data.frame(lag = a$lag[, 1, 1], acf = a$acf[, 1, 1]), aes(x = lag, y = acf)) +
+  geom_line(colour = "blue") + geom_hline(yintercept = 0) +
+  labs(x = "Defasagem (nº de clientes)", y = "Autocorrelação", title = "ACF de T (observações)")
+lote <- function(x, b) colMeans(matrix(x[1:(b * (length(x) %/% b))], nrow = b))
+tams <- c(10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000)
+r1 <- sapply(tams, function(b) { y <- lote(x, b); cor(y[-1], y[-length(y)]) })
+g2 <- ggplot(data.frame(b = tams, r1 = r1), aes(x = b, y = r1)) +
+  geom_line() + geom_point() + geom_hline(yintercept = 0, linetype = "dashed") +
+  scale_x_log10(labels = scales::label_number(big.mark = ".", decimal.mark = ",")) +
+  labs(x = "Tamanho do lote (escala log)", y = "Correlação lag-1",
+       title = "Médias de lotes consecutivos")
+print(data.frame(b = tams, r1 = round(r1, 3)))
+ggsave("pdf_babel/a26_acf.pdf", g1 + g2, width = 9, height = 3.4)
+#+end_src
+
+* Solução 1: réplicas independentes
+
+- \(m\) réplicas, cada uma com sementes distintas, comprimento \(n_0 + n\)
+- Descarta as \(n_0\) primeiras observações de cada réplica
+
+\[
+\bar x_i = \frac{1}{n}\sum_{j=n_0+1}^{n_0+n} x_{ij}, \qquad
+\bar{\bar x} = \frac{1}{m}\sum_{i=1}^{m} \bar x_i, \qquad
+s^2 = \frac{1}{m-1}\sum_{i=1}^{m} (\bar x_i - \bar{\bar x})^2
+\]
+\[
+\text{IC: } \bar{\bar x} \pm t_{1-\alpha/2;\,m-1}\, \frac{s}{\sqrt m}
+\]
+
+#+latex: \vfill\pause
+
+#+begin_src R :exports code
+medias <- sapply(1:10, function(i) {
+  d <- mm1_sim(lambda = 0.8, mu = 1, n_clientes = 22000, semente = 8000 + i)
+  mean(d$resposta[-(1:2000)])           # descarta o aquecimento
+})
+t.test(medias)$conf.int                 # IC 95% entre réplicas
+#+end_src
+
+#+latex: \vfill\pause
+
+- \(+\) Médias das réplicas são de fato independentes (sementes distintas)
+- \(-\) Cada réplica paga o custo do aquecimento (\(m \cdot n_0\) observações descartadas)
+- Natural para simulações *terminais*
+
+* Solução 2: médias em lotes (\textit{batch means})
+
+- *Uma* execução longa; descarta \(n_0\); divide o restante em \(m\) lotes
+  contíguos de tamanho \(n\)
+- Média de cada lote \(\bar x_i\) \(\to\) mesmas fórmulas das réplicas
+- Escolha de \(n\): aumentar até a correlação entre lotes consecutivos ser
+  desprezível (figura anterior)
+
+#+latex: \vfill\pause
+
+#+begin_src R :exports code
+d <- mm1_sim(lambda = 0.8, mu = 1, n_clientes = 21000, semente = 5001)
+x <- d$resposta[-(1:1000)]               # descarta o aquecimento
+lotes <- colMeans(matrix(x, ncol = 20))  # 20 lotes de 1000 clientes
+t.test(lotes)$conf.int                   # IC 95% com médias de lotes
+t.test(x)$conf.int                       # IC "ingênuo": NÃO FAÇA ISSO
+#+end_src
+
+#+latex: \vfill\pause
+
+- \(+\) Paga o aquecimento só uma vez
+- \(-\) Lotes adjacentes ainda um pouco correlacionados se \(n\) for pequeno
+- *Regeneração*: lotes delimitados por instantes em que o sistema ``renasce''
+  (ex.: fila esvazia) \Rightarrow ciclos independentes, mas de tamanho variável
+  (estimador de razão)
+
+* Comparando os ICs: cobertura
+
+#+attr_latex: :width .95\linewidth
+[[file:pdf_babel/a26_cobertura.pdf]]
+
+#+latex: \vspace{-.3cm}
+- \(\rho=0{,}8\): 200 execuções de 20.000 clientes (após aquecimento de 1.000);
+  primeiras 50 mostradas; vermelho: IC não contém \(\mathbb{E}[T]=5\)
+- IC ingênuo (\(n=20.000\)) cobre \(\mathbb{E}[T]\) em só *18,5%* das execuções
+  (deveria ser 95%!); médias de 20 lotes: *92%*
+- Meia-largura média: ingênuo \(\approx 0{,}07\) vs. lotes \(\approx 0{,}62\)
+
+#+begin_src R :results output graphics file :file pdf_babel/a26_cobertura.pdf :exports none :tangle aula26-simulacao-pt-br-figs.R
+## Cobertura: IC ingênuo (observações individuais) vs médias de 20 lotes
+cob <- bind_rows(lapply(1:200, function(i) {
+  x <- mm1_sim(0.8, 1, 21000, semente = 5000 + i)$resposta[-(1:1000)]
+  bind_rows(data.frame(exec = i, metodo = "IC ingênuo (20.000 obs.)", t(ic(x))),
+            data.frame(exec = i, metodo = "Médias de 20 lotes", t(ic(colMeans(matrix(x, ncol = 20))))))
+})) %>% mutate(cobre = inf <= 5 & sup >= 5)
+resumo <- cob %>% group_by(metodo) %>%
+  summarize(cobertura = mean(cobre), meia_largura = mean((sup - inf) / 2))
+print(resumo)
+rot <- setNames(sprintf("%s: cobertura %s%%", resumo$metodo,
+                        format(round(100 * resumo$cobertura, 1), nsmall = 1, decimal.mark = ",")), resumo$metodo)
+g <- ggplot(cob %>% filter(exec <= 50), aes(x = exec, colour = cobre)) +
+  geom_errorbar(aes(ymin = inf, ymax = sup), width = 0) +
+  geom_point(aes(y = media), size = 0.8) +
+  geom_hline(yintercept = 5, linetype = "dashed") +
+  facet_wrap(~ metodo, labeller = as_labeller(rot)) +
+  scale_colour_manual(values = c(`TRUE` = "grey40", `FALSE` = "red"), guide = "none") +
+  labs(x = "Execução (semente)", y = "Tempo de resposta médio")
+ggsave("pdf_babel/a26_cobertura.pdf", g, width = 9, height = 3.4)
+#+end_src
+
+* Quanto mais perto de \(\rho = 1\), mais longa a simulação
+
+#+attr_latex: :width .95\linewidth
+[[file:pdf_babel/a26_rho.pdf]]
+
+- Para cada \(\rho\): 40 réplicas de 15.000 clientes (5.000 descartados como aquecimento)
+- Esquerda: meia-largura relativa do IC 95% de \(\bar T\) (mesmo esforço computacional)
+- Direita: nº de clientes por réplica para atingir \(\pm 5\%\)
+  (extrapolado: largura \(\propto 1/\sqrt{n}\))
+- Variância e autocorrelação *explodem* quando \(\rho \to 1\)
+  (teoria: \(n \propto (1-\rho)^{-2}\) para precisão relativa fixa)
+
+#+begin_src R :results output graphics file :file pdf_babel/a26_rho.pdf :exports none :tangle aula26-simulacao-pt-br-figs.R
+## Precisão relativa vs rho, esforço fixo; nº de clientes necessário para +-5%
+rr <- bind_rows(lapply(seq(0.5, 0.95, by = 0.05), function(rho) {
+  med <- sapply(1:40, function(i) mean(mm1_sim(rho, 1, 15000, semente = 100000 + round(100 * rho) * 100 + i)$resposta[-(1:5000)]))
+  v <- ic(med)
+  data.frame(rho = rho, rel = (v[["sup"]] - v[["media"]]) / v[["media"]])
+})) %>% mutate(n_nec = 10000 * (rel / 0.05)^2)
+print(rr, digits = 3)
+g1 <- ggplot(rr, aes(x = rho, y = 100 * rel)) + geom_line() + geom_point() +
+  labs(x = expression(rho), y = "Meia-largura relativa (%)", title = "Precisão com esforço fixo")
+g2 <- ggplot(rr, aes(x = rho, y = n_nec)) + geom_line() + geom_point() +
+  scale_y_log10(labels = scales::label_number(big.mark = ".", decimal.mark = ",")) +
+  labs(x = expression(rho), y = "Clientes por réplica (log)", title = "Esforço para IC de ±5%")
+ggsave("pdf_babel/a26_rho.pdf", g1 + g2, width = 9, height = 3.3)
+#+end_src
+
+* Técnicas de redução de variância
+
+- Objetivo: mesma precisão com menos execução
+  - *Números aleatórios comuns*: comparar alternativas A e B com os *mesmos*
+    fluxos aleatórios \Rightarrow \(\mathrm{Var}(\bar x_A - \bar x_B)\) diminui
+    (análogo ao \textit{blocking} / observações pareadas da aula 22)
+  - *Variáveis antitéticas*: réplica com \(U\) e outra com \(1-U\)
+    (correlação negativa)
+  - *Variáveis de controle*: corrigir por uma quantidade de média conhecida
+
+#+latex: \vfill\pause
+
+- Jain: usar com cautela -- mal aplicadas, podem *aumentar* a variância;
+  exigem conhecimento estatístico
+
+#+latex: \vfill\pause
+
+** Para pensar (parte opcional da atividade)                       :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+- Compare M/M/1 com \(\mu=1\) e \(\mu=1{,}1\) (\(\lambda=0{,}8\)), usando
+  (a) sementes diferentes e (b) as mesmas sementes nas duas alternativas
+- Qual dá um IC mais estreito para a diferença \(\bar T_A - \bar T_B\)?
+  (dica: =mm1_sim= sorteia chegadas e serviços do mesmo fluxo -- isso
+  enfraquece o efeito; por quê?)
+
+* Resumo: análise de saída de simulação \(=\) estimar médias com ICs
+
+- Uma execução de simulação é *um experimento aleatório*
+  \Rightarrow tudo o que vimos nas aulas 20--25 se aplica
+  - ICs, número de réplicas, comparação de alternativas, regressão sobre
+    os resultados (ex.: \(\bar T\) em função de \(\rho\))
+
+#+latex: \vfill\pause
+
+- Particularidades da simulação
+  1. *Verificar* (bugs) e *validar* (hipóteses) antes de acreditar
+  2. Remover o *transiente* (regime permanente) ou modelá-lo (terminal)
+  3. Observações dentro de uma execução são *autocorrelacionadas*
+     \Rightarrow réplicas independentes ou médias em lotes, nunca o IC ingênuo
+  4. Controlar e registrar *sementes*
+  5. Esforço necessário cresce muito perto da saturação (\(\rho \to 1\))
+
+#+latex: \vfill\pause
+
+- Vantagem sobre medições: controle total (sementes, ausência de ruído
+  externo, réplicas baratas e paralelizáveis)
+
+* Atividade (aula remota): enunciado
+
+Individual. Use o simulador =a26_mm1.R= (\(\mu = 1\)) e entregue um *relatório
+Org ou Rmd* (fonte + PDF/HTML) com código, figuras e texto.
+Use como semente base o seu nº de cartão UFRGS.
+Enunciado completo (uma página): =a26_atividade.org=
+
+#+latex: \vfill
+
+#+latex: {\small
+1. *Verificação*: rode =mm1_sim(0.5, 1, 6, semente, trace = TRUE)=; monte a
+   tabela de eventos (como no slide do passo a passo) e confira à mão o tempo
+   de resposta de 2 clientes
+2. *Transiente*: para \(\rho=0{,}9\), aplique o método de Welch (\(m=100\)
+   réplicas de 5.000 clientes); escolha e justifique o ponto de corte \(l\)
+3. *Réplicas independentes*: para \(\rho \in \{0{,}5;\ 0{,}8;\ 0{,}9\}\),
+   \(m=10\) réplicas de \(l + 20.000\) clientes; IC 95% de \(\mathbb{E}[T]\);
+   compare com \(1/(\mu-\lambda)\) em tabela e figura
+4. *Médias em lotes*: para os mesmos \(\rho\), uma execução de
+   \(l + 200.000\) clientes; 20 lotes; verifique a correlação entre lotes
+   consecutivos; IC 95%; compare com o item 3 e com o IC ingênuo
+5. *Esforço*: para \(\rho=0{,}9\), estime quantos clientes por réplica
+   (\(m=10\)) são necessários para \(\pm 5\%\); confirme rodando
+6. *Conclusão*: o simulador está verificado? Qual método você prefere e por quê?
+#+latex: }
+
+* Atividade: o que entregar e como será avaliada
+
+** Entrega (Moodle, prazo indicado lá)                             :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+- Um arquivo =.org= ou =.Rmd= *que roda do início ao fim* (=source("a26_mm1.R")=)
+  + o PDF/HTML gerado
+- Todas as sementes explícitas no código \Rightarrow resultados reprodutíveis
+- Para cada item: código, resultado (tabela/figura) e 2--5 frases de interpretação
+
+#+latex: \vfill\pause
+
+** Critérios                                                       :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+|----------------------------------------------------------+------|
+| Correção e reprodutibilidade (código roda, sementes, ICs certos) | 30% |
+| Figuras (Welch, ICs vs. teoria) legíveis e com eixos rotulados    | 25% |
+| Interpretação (transiente, autocorrelação, \(\rho \to 1\), conclusões) | 35% |
+| Organização e clareza do relatório                                | 10% |
+|----------------------------------------------------------+------|
+
+#+latex: \vfill\pause
+
+- Dúvidas: fórum da disciplina. Dica: comece pelo item 1 -- se a tabela de
+  eventos não fizer sentido, os itens seguintes também não farão
+
+* Próximas aulas: SimGrid
+
+- Simular sistemas *distribuídos* e de alto desempenho
+  - Modelos de plataforma, rede e CPU; API S4U; caso mestre--trabalhadores
+  - Experimentos variando plataforma e nº de trabalhadores (aula 27)
+
+#+latex: \vfill\pause
+
+- *Calibração e validação* (aula 28)
+  - SMPI: executar aplicações MPI reais sobre a plataforma simulada
+  - Estudo de caso HPL: o tempo de =dgemm= modelado por *regressão linear*
+    (aulas 23--25) e injetado no simulador
+  - Validação: simulado vs. real, com ICs
+
+#+latex: \vfill\pause
+
+- Mesmo núcleo que hoje: escalonador de eventos + relógio + rotinas
+  \Rightarrow mas os ``eventos'' são computações e comunicações, e os modelos
+  de desempenho precisam ser calibrados com dados reais
+
+* Referências
+
+#+latex: {\small
+- Jain, Raj. /The Art of Computer Systems Performance Analysis:
+  Techniques for Experimental Design, Measurement, Simulation, and
+  Modeling/. New York: John Wiley, 1991. ISBN 0471503363.
+  - Cap. 24: /Introduction to Simulation/
+  - Cap. 25: /Analysis of Simulation Results/
+  - Cap. 26: /Random-Number Generation/ (geradores e sementes)
+- Law, Averill M. /Simulation Modeling and Analysis/. 5ª ed.,
+  McGraw-Hill, 2015 (caps. 1 e 9: estrutura de DES, análise de saída,
+  método de Welch, \textit{batch means}).
+- Welch, P. D. The Statistical Analysis of Simulation Results. In:
+  Lavenberg, S. (ed.), /Computer Performance Modeling Handbook/,
+  Academic Press, 1983.
+- Código da prática: =a26_mm1.R=; figuras: =aula26-simulacao-pt-br-figs.R=
+  (gerado por \textit{tangle} deste =.org=)
+#+latex: }

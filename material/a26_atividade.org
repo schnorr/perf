@@ -1,0 +1,83 @@
+# -*- coding: utf-8 -*-
+# -*- mode: org -*-
+#+Title: Atividade -- Aula 26: Análise de resultados de simulação (M/M/1)
+#+Author: Análise de Desempenho de Sist. Comp. -- Prof. Lucas Mello Schnorr
+#+Date: Aula remota, 02/12
+#+LANGUAGE: pt-br
+#+OPTIONS: toc:nil num:nil ^:{} H:2
+#+LATEX_CLASS: article
+#+LATEX_CLASS_OPTIONS: [a4paper,10pt]
+#+LATEX_HEADER: \usepackage[margin=1.5cm]{geometry}
+#+LATEX_HEADER: \usepackage{enumitem}\setlist{nosep,leftmargin=*}
+#+LATEX_HEADER: \usepackage{titling}\setlength{\droptitle}{-1.8cm}\pretitle{\begin{center}\large\bfseries}\posttitle{\end{center}\vspace{-1.2em}}
+#+LATEX_HEADER: \usepackage[portuguese]{babel}
+
+*Objetivo*: praticar a análise de saída de uma simulação de eventos
+discretos -- verificação, remoção do transiente e intervalos de
+confiança (ICs) com réplicas independentes e com médias em lotes.
+*Individual*. Material de apoio: slides da aula 26
+(=aula26-simulacao-pt-br.pdf=) e o simulador =a26_mm1.R=.
+
+*Simulador*: =source("a26_mm1.R")= define
+=mm1_sim(lambda, mu, n_clientes, semente, trace)=, que simula uma fila
+M/M/1 começando *vazia* e devolve um =data.frame= com uma linha por
+cliente (coluna =resposta= = tempo de resposta) e o atributo =N_medio=.
+Use sempre \(\mu = 1\) (logo \(\rho = \lambda\)). Teoria:
+\(\mathbb{E}[T] = 1/(\mu-\lambda)\), \(\mathbb{E}[N] = \rho/(1-\rho)\).
+*Sementes*: use o seu nº de cartão UFRGS como semente base \(S\) e
+derive as demais (ex.: \(S+1, S+2, \dots\)); nunca reutilize a mesma
+semente em réplicas diferentes.
+
+* Tarefas
+
+1. *Verificação manual*. Rode =mm1_sim(0.5, 1, 6, semente = S, trace = TRUE)=.
+   Monte a tabela de eventos (relógio, evento, \(N\), próxima chegada,
+   próxima partida) e calcule à mão o tempo de resposta de dois clientes;
+   confira com a saída da função.
+2. *Transiente (método de Welch)*. Para \(\rho = 0{,}9\), faça
+   \(m = 100\) réplicas de 5.000 clientes; calcule a média *entre
+   réplicas* de cada índice de cliente e suavize-a com uma média móvel
+   (teste ao menos duas janelas \(w\)). Faça o gráfico, escolha o ponto
+   de corte \(l\) e justifique. Use esse \(l\) (ou um maior) nos itens seguintes.
+3. *Réplicas independentes*. Para \(\rho \in \{0{,}5;\ 0{,}8;\ 0{,}9\}\),
+   faça \(m = 10\) réplicas de \(l + 20.000\) clientes, descarte os \(l\)
+   primeiros de cada uma e calcule o IC 95% de \(\mathbb{E}[T]\) a partir
+   das 10 médias. Apresente tabela e figura (simulado com IC vs. teórico).
+4. *Médias em lotes*. Para os mesmos \(\rho\), faça *uma* execução de
+   \(l + 200.000\) clientes, descarte \(l\), divida em 20 lotes e calcule
+   o IC 95%. Verifique a correlação entre médias de lotes consecutivos
+   (=cor(y[-1], y[-length(y)])=). Calcule também o IC ``ingênuo'' com
+   todas as observações individuais. Compare os três ICs e explique as
+   diferenças (dica: =acf()=).
+5. *Esforço*. Para \(\rho = 0{,}9\) e \(m = 10\), estime quantos clientes
+   por réplica são necessários para um IC de \(\pm 5\%\) de
+   \(\mathbb{E}[T]\) (a meia-largura cai com \(1/\sqrt{n}\)). Confirme
+   rodando com o \(n\) estimado. Comente o que acontece quando \(\rho \to 1\).
+6. *Conclusão*. O simulador está verificado? Algum IC não contém o valor
+   teórico? Isso indica bug? Qual método (réplicas ou lotes) você
+   prefere aqui e por quê?
+7. /(Opcional)/ *Números aleatórios comuns*: compare \(\mu = 1\) e
+   \(\mu = 1{,}1\) com \(\lambda = 0{,}8\), usando sementes diferentes vs.
+   as mesmas sementes nas duas alternativas; qual IC para
+   \(\bar T_A - \bar T_B\) é mais estreito? Por que o efeito é fraco com
+   =mm1_sim=?
+
+* Entrega (Moodle, prazo indicado lá)
+
+- Um arquivo =.org= ou =.Rmd= que *roda do início ao fim* (a partir do
+  diretório onde está =a26_mm1.R=), e o PDF/HTML gerado.
+- Todas as sementes explícitas no código: os resultados devem ser reprodutíveis.
+- Para cada item: código, resultado (tabela e/ou figura com eixos
+  rotulados) e 2--5 frases de interpretação.
+
+* Critérios de avaliação
+
+| Critério                                                                | Peso |
+|-------------------------------------------------------------------------+------|
+| Correção e reprodutibilidade (código roda, sementes, ICs corretos)      |  30% |
+| Figuras (Welch, ICs vs. teoria) legíveis e com eixos rotulados          |  25% |
+| Interpretação (transiente, autocorrelação, \(\rho \to 1\), conclusões)  |  35% |
+| Organização e clareza do relatório                                      |  10% |
+
+Dúvidas: fórum da disciplina. Comece pelo item 1 -- se a tabela de
+eventos não fizer sentido, os itens seguintes também não farão.
