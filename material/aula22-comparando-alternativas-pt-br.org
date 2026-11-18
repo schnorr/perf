@@ -1,0 +1,716 @@
+# -*- coding: utf-8 -*-
+# -*- mode: org -*-
+#+startup: beamer overview indent
+#+LANGUAGE: pt-br
+#+TAGS: noexport(n)
+#+EXPORT_EXCLUDE_TAGS: noexport
+#+EXPORT_SELECT_TAGS: export
+
+#+Title: Análise de Desempenho de Sist. Comp.
+#+SubTitle: Comparando Alternativas com Intervalos de Confiança
+#+Author: Prof. Lucas Mello Schnorr
+#+Date: \copyleft
+
+#+LaTeX_CLASS: beamer
+#+LaTeX_CLASS_OPTIONS: [xcolor=dvipsnames,10pt]
+#+OPTIONS: H:1 num:t toc:nil \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+#+LATEX_HEADER: \input{org-babel.tex}
+
+* Figuras (código R)                                               :noexport:
+
+Todas as figuras desta aula são geradas pelo código abaixo. O =make=
+faz o /tangle/ para =aula22-comparando-alternativas-pt-br-figs.R=; para
+regenerar as figuras, a partir de =material/=:
+
+: Rscript aula22-comparando-alternativas-pt-br-figs.R
+
+#+begin_src R :results output graphics file :file pdf_babel/a22_ic_sobreposicao.pdf :exports none :tangle aula22-comparando-alternativas-pt-br-figs.R
+suppressMessages({
+  library(ggplot2)
+  library(dplyr)
+  library(tidyr)
+  library(readr)
+})
+salva <- function(arq, p, w = 6, h = 3) {
+  ggsave(arq, p, width = w, height = h, device = cairo_pdf)
+}
+
+# Esquema: ICs que se sobrepõem ou não
+esq <- tibble(
+  Cenario = factor(rep(c("(a) ICs disjuntos", "(b) ICs se sobrepõem"), each = 2),
+                   levels = c("(a) ICs disjuntos", "(b) ICs se sobrepõem")),
+  Alternativa = rep(c("A", "B"), 2),
+  media = c(10, 13, 10, 11.5),
+  ic = c(1.2, 1.2, 1.2, 1.2))
+p <- ggplot(esq, aes(x = Alternativa, y = media, ymin = media - ic,
+                     ymax = media + ic, color = Alternativa)) +
+  geom_errorbar(width = .25, linewidth = .8) + geom_point(size = 3) +
+  facet_wrap(~Cenario) + theme_bw(base_size = 13) +
+  scale_color_brewer(palette = "Set1", guide = "none") +
+  ylab("Tempo médio (IC 95%)") + xlab(NULL)
+salva("pdf_babel/a22_ic_sobreposicao.pdf", p, w = 6, h = 2.8)
+#+end_src
+
+#+begin_src R :results output graphics file :file pdf_babel/a22_set1_ic.pdf :exports none :tangle aula22-comparando-alternativas-pt-br-figs.R
+# Dados do slide original do SMPE (A. Legrand): 40 setups,
+# setup = rgamma(n, shape=3); A = setup+1.5+U(0,1); B = setup+2.5+U(0,1)
+df <- read_csv("a22_set1.csv", show_col_types = FALSE) |>
+  mutate(setup = row_number())
+
+ic_plot <- function(dfgg, niveis) {
+  dfsum <- dfgg |> group_by(Alternativa) |>
+    summarize(num = n(), media = mean(Tempo), sd = sd(Tempo),
+              ic = 2 * sd / sqrt(num))
+  ggplot(dfgg, aes(x = Alternativa, y = Tempo, color = Alternativa)) +
+    scale_color_brewer(palette = "Set1", guide = "none") +
+    theme_bw(base_size = 13) + xlab(NULL) + ylab("Tempo (s)") +
+    geom_jitter(alpha = .3, position = position_jitter(width = .1, seed = 1)) +
+    geom_errorbar(data = dfsum, width = .25, linewidth = .8,
+                  aes(y = media, ymin = media - ic, ymax = media + ic)) +
+    geom_point(data = dfsum, shape = 21, size = 3, aes(y = media))
+}
+
+# (1) A e B analisados independentemente
+p1 <- df |> select(A, B) |>
+  pivot_longer(everything(), names_to = "Alternativa", values_to = "Tempo") |>
+  ic_plot()
+salva("pdf_babel/a22_set1_indep.pdf", p1, w = 3.2, h = 3)
+
+# (2) Pares ligados por setup
+p2 <- df |> select(setup, A, B) |>
+  pivot_longer(-setup, names_to = "Alternativa", values_to = "Tempo") |>
+  ggplot(aes(x = Alternativa, y = Tempo, group = setup)) +
+  geom_line(alpha = .4) + geom_point(aes(color = Alternativa)) +
+  scale_color_brewer(palette = "Set1", guide = "none") +
+  theme_bw(base_size = 13) + xlab(NULL) + ylab("Tempo (s)")
+salva("pdf_babel/a22_set1_pares.pdf", p2, w = 3.2, h = 3)
+
+# (3) A, B e a diferença pareada B - A
+p3 <- df |> mutate(`B - A` = B - A) |> select(A, B, `B - A`) |>
+  pivot_longer(everything(), names_to = "Alternativa", values_to = "Tempo") |>
+  mutate(Alternativa = factor(Alternativa, levels = c("A", "B", "B - A"))) |>
+  ic_plot() + geom_hline(yintercept = 0, linetype = "dashed", color = "gray50")
+salva("pdf_babel/a22_set1_ic.pdf", p3, w = 5, h = 3)
+#+end_src
+
+#+begin_src R :results output graphics file :file pdf_babel/a22_piloto.pdf :exports none :tangle aula22-comparando-alternativas-pt-br-figs.R
+# Piloto: maria.csv (blocking-ab.sh, 30 rodadas numa máquina, 4 flags).
+# Mesma análise de blocking-ci.R --por-rep (bloco = rodada), com IC 95%.
+pil <- read_csv("maria.csv", show_col_types = FALSE)
+alt <- sort(unique(pil$flags))
+larg <- pil |> select(rep, flags, tempo) |>
+  pivot_wider(names_from = flags, values_from = tempo)
+difs <- character()
+for (i in seq_along(alt)[-1]) {
+  nome <- sprintf("%s − %s", alt[i], alt[i - 1])
+  larg[[nome]] <- larg[[alt[i]]] - larg[[alt[i - 1]]]
+  difs <- c(difs, nome)
+}
+paineis <- c("Tempo por alternativa", "Diferenças pareadas por rodada")
+gg <- larg |> select(all_of(c(alt, difs))) |>
+  pivot_longer(everything(), names_to = "Alt", values_to = "Tempo") |>
+  mutate(Alt = factor(Alt, levels = c(alt, difs)),
+         Painel = factor(ifelse(Alt %in% difs, paineis[2], paineis[1]),
+                         levels = paineis))
+sm <- gg |> group_by(Painel, Alt) |>
+  summarize(num = n(), media = mean(Tempo), sd = sd(Tempo),
+            ic = 2 * sd / sqrt(num), .groups = "drop")
+print(sm)
+p <- ggplot(gg, aes(x = Alt, y = Tempo, color = Alt)) +
+  scale_color_manual(values = c("#E41A1C", "#377EB8", "#4DAF4A", "#984EA3",
+                                "#FF7F00", "#A65628", "#F781BF"),
+                     guide = "none") +
+  theme_bw(base_size = 12) + xlab(NULL) + ylab("Tempo (s)") +
+  facet_wrap(~Painel, scales = "free") +
+  geom_hline(data = data.frame(Painel = factor(paineis[2], levels = paineis)),
+             aes(yintercept = 0), color = "gray50", linetype = "dashed") +
+  geom_jitter(alpha = .3, position = position_jitter(width = .1, seed = 1)) +
+  geom_errorbar(data = sm, width = .25, linewidth = .8,
+                aes(y = media, ymin = media - ic, ymax = media + ic)) +
+  geom_point(data = sm, shape = 21, size = 3, aes(y = media))
+salva("pdf_babel/a22_piloto.pdf", p, w = 8, h = 3.3)
+#+end_src
+
+#+begin_src R :results output graphics file :file pdf_babel/a22_maquinas_sim.pdf :exports none :tangle aula22-comparando-alternativas-pt-br-figs.R
+# Simulação: 15 máquinas (blocos) com velocidades muito diferentes;
+# efeito MULTIPLICATIVO: -O3 é 4% mais rápido que -O2 em toda máquina.
+set.seed(22)
+m <- 15
+vel <- exp(rnorm(m, 0, .4))           # fator de lentidão de cada máquina
+sim <- tibble(maquina = 1:m,
+              O2 = 0.66 * vel * exp(rnorm(m, 0, .02)),
+              O3 = 0.66 * 0.96 * vel * exp(rnorm(m, 0, .02)))
+paineis <- c("Tempo (média por máquina)", "O3 − O2", "O3 / O2")
+gg <- bind_rows(
+  sim |> pivot_longer(c(O2, O3), names_to = "Alt", values_to = "v") |>
+    mutate(Painel = paineis[1]),
+  sim |> transmute(maquina, Alt = "O3 − O2", v = O3 - O2, Painel = paineis[2]),
+  sim |> transmute(maquina, Alt = "O3 / O2", v = O3 / O2, Painel = paineis[3])) |>
+  mutate(Painel = factor(Painel, levels = paineis))
+sm <- gg |> group_by(Painel, Alt) |>
+  summarize(num = n(), media = mean(v), sd = sd(v),
+            ic = 2 * sd / sqrt(num), .groups = "drop")
+print(sm)
+ref <- data.frame(Painel = factor(paineis[2:3], levels = paineis), y = c(0, 1))
+p <- ggplot(gg, aes(x = Alt, y = v)) +
+  facet_wrap(~Painel, scales = "free") + theme_bw(base_size = 12) +
+  xlab(NULL) + ylab(NULL) +
+  geom_hline(data = ref, aes(yintercept = y), linetype = "dashed", color = "gray50") +
+  geom_line(data = gg |> filter(Painel == paineis[1]),
+            aes(group = maquina), alpha = .3) +
+  geom_point(alpha = .4, color = "gray30") +
+  geom_errorbar(data = sm, inherit.aes = FALSE, width = .2, linewidth = .8,
+                color = "#E41A1C",
+                aes(x = Alt, ymin = media - ic, ymax = media + ic)) +
+  geom_point(data = sm, aes(y = media), color = "#E41A1C", size = 2.5, shape = 21)
+salva("pdf_babel/a22_maquinas_sim.pdf", p, w = 8, h = 3.1)
+#+end_src
+
+#+begin_src R :results output graphics file :file pdf_babel/a22_4plot_iid.pdf :exports none :tangle aula22-comparando-alternativas-pt-br-figs.R
+# Verificações gráficas: sequência, defasagem (lag), histograma, QQ normal
+quatro <- function(v, titulo) {
+  d <- tibble(i = seq_along(v), v = v)
+  lag <- tibble(x = head(v, -1), y = tail(v, -1))
+  p1 <- ggplot(d, aes(i, v)) + geom_line(linewidth = .3) + theme_bw(base_size = 10) +
+    ggtitle("Sequência") + xlab("Ordem da medição") + ylab("Tempo")
+  p2 <- ggplot(lag, aes(x, y)) + geom_point(alpha = .4, size = .8) +
+    theme_bw(base_size = 10) + ggtitle("Defasagem (lag 1)") +
+    xlab("Tempo[i]") + ylab("Tempo[i+1]")
+  p3 <- ggplot(d, aes(v)) + geom_histogram(bins = 30, fill = "gray60", color = "gray30") +
+    theme_bw(base_size = 10) + ggtitle("Histograma") + xlab("Tempo") + ylab(NULL)
+  p4 <- ggplot(d, aes(sample = v)) + stat_qq(size = .6, alpha = .5) + stat_qq_line(color = "#E41A1C") +
+    theme_bw(base_size = 10) + ggtitle("QQ-plot normal") + xlab("Teórico") + ylab("Amostra")
+  patchwork::wrap_plots(p1, p2, p3, p4, nrow = 1) +
+    patchwork::plot_annotation(title = titulo)
+}
+set.seed(42)
+n <- 300
+v_iid <- 10 + rnorm(n)
+ggsave("pdf_babel/a22_4plot_iid.pdf",
+       quatro(v_iid, "(a) Medições independentes e identicamente distribuídas"),
+       width = 9, height = 2.6, device = cairo_pdf)
+# Autocorrelação (AR(1), phi = 0.9): ex. temperatura/frequência da CPU
+v_ar <- 10 + as.numeric(arima.sim(list(ar = .9), n = n)) * sqrt(1 - .81)
+ggsave("pdf_babel/a22_4plot_ar.pdf",
+       quatro(v_ar, "(b) Medições com dependência temporal (autocorrelação)"),
+       width = 9, height = 2.6, device = cairo_pdf)
+#+end_src
+
+#+begin_src R :results output graphics file :file pdf_babel/a22_tendencias.pdf :exports none :tangle aula22-comparando-alternativas-pt-br-figs.R
+# Três padrões de sequência a procurar
+set.seed(7)
+n <- 300
+i <- 1:n
+seqs <- bind_rows(
+  tibble(i, v = 1 + .5 * exp(-i / 25) + .03 * rnorm(n), caso = "(a) Aquecimento (warm-up)"),
+  tibble(i, v = 1 + .06 * sin(2 * pi * i / 50) + .03 * rnorm(n), caso = "(b) Periodicidade"),
+  tibble(i, v = 1 + .03 * rnorm(n) + ifelse(runif(n) < .03, runif(n, .2, .6), 0),
+         caso = "(c) Valores atípicos (outliers)")) |>
+  mutate(caso = factor(caso, levels = unique(caso)))
+p <- ggplot(seqs, aes(i, v)) + geom_line(linewidth = .3) +
+  facet_wrap(~caso, scales = "free_y") + theme_bw(base_size = 12) +
+  xlab("Ordem da medição") + ylab("Tempo (s)")
+salva("pdf_babel/a22_tendencias.pdf", p, w = 9, h = 2.8)
+#+end_src
+
+* Plano da aula
+
+Na aula passada (estatística básica):
+- Teorema Central do Limite: a média amostral \( \bar{x} \) é
+  aproximadamente normal quando \( n \) é grande
+- Intervalo de confiança de 95% para a média: \( \bar{x} \pm 2\,\sigma/\sqrt{n} \)
+
+#+latex: \vfill\pause
+
+Hoje: *como comparar duas (ou mais) alternativas*
+1. Comparar ICs: quando se pode concluir algo?
+2. /Blocking/: emparelhar observações para *reduzir variância*
+3. *Demonstração ao vivo*: =-O2= vs =-O3= nas máquinas de vocês
+4. Randomização, replicação e pseudo-replicação
+5. O que verificar: hipóteses, quantas réplicas, dependência temporal
+
+* Recordação: intervalo de confiança da média
+
+Para \( n \) medições independentes \( x_1, \dots, x_n \) com média
+\( \bar{x} \) e desvio padrão amostral \( s \):
+
+\[
+P\left(\mu \in \left[\bar{x} - z\frac{s}{\sqrt{n}},\; \bar{x} + z\frac{s}{\sqrt{n}}\right]\right) \approx 1-\alpha
+\]
+
+| Confiança \( 1-\alpha \) | 68% | 90%  | 95%  | 99%  | 99,7% |
+|--------------------------+-----+------+------+------+-------|
+| \( z \)                  | 1   | 1,64 | 1,96 | 2,58 | 3     |
+
+#+latex: \vfill\pause
+
+- A largura do IC é proporcional a \( s/\sqrt{n} \)
+- Interpretação: se repetirmos o experimento muitas vezes, 95% dos
+  ICs construídos assim conterão a média verdadeira \( \mu \)
+- \( \bar{x} \) é uma *estimativa*; o IC diz *o quanto confiar* nela
+
+* Comparando duas alternativas \( A \) e \( B \)
+
+Medimos \( A \) e \( B \) em \( n \) /setups/ e queremos saber se
+\( \mu_A < \mu_B \)
+
+#+attr_latex: :width .75\linewidth
+[[file:pdf_babel/a22_ic_sobreposicao.pdf]]
+
+#+latex: \pause
+
+- (a) ICs de 95% disjuntos \(\leadsto\) \( \mu_A < \mu_B \) com
+  confiança (mais de 90%)
+- (b) ICs se sobrepõem \(\leadsto\) *nada se conclui*
+  - não quer dizer que \( A = B \)! Só que não temos dados suficientes
+
+* E se os ICs se sobrepõem?
+
+Tentação 1: usar ICs mais estreitos (70% em vez de 95%)
+- os ICs deixam de se sobrepor\dots mas a conclusão vale com
+  *menos de 50%* de confiança. Não é solução.
+
+#+latex: \vfill\pause
+
+Tentação 2: fazer mais experimentos
+- Largura \( \propto s/\sqrt{n} \): para *reduzir o IC pela metade*
+  são necessários *4 vezes mais* experimentos
+- 10 vezes mais estreito \(\leadsto\) 100 vezes mais experimentos
+
+#+latex: \vfill\pause
+
+Melhor: *reduzir a variância* \( s^2 \)
+- de onde vem a variabilidade? Ela é /comum/ às duas alternativas?
+- se for, podemos *eliminá-la* da comparação: /blocking/
+
+* Exemplo: 40 /setups/, duas alternativas
+
+#+latex: \begin{columns}\begin{column}{.48\linewidth}
+#+attr_latex: :width \linewidth
+[[file:pdf_babel/a22_set1_indep.pdf]]
+#+latex: \end{column}\begin{column}{.48\linewidth}
+#+latex: \pause
+#+attr_latex: :width \linewidth
+[[file:pdf_babel/a22_set1_pares.pdf]]
+#+latex: \end{column}\end{columns}
+
+- Esquerda: ICs de 95% estimados *independentemente*: se sobrepõem
+- Direita: cada linha liga \( A_i \) e \( B_i \) medidos no *mesmo setup* \( i \)
+  - alguns setups são intrinsecamente lentos, outros rápidos
+  - mas em *todos* \( B_i > A_i \)!
+
+* /Blocking/: analisar a diferença \( B - A \)
+
+Observe que \( \mathbb{E}[A] < \mathbb{E}[B] \iff \mathbb{E}[B - A] > 0 \)
+- como \( A_i \) e \( B_i \) vêm do *mesmo setup*, calculamos \( D_i = B_i - A_i \)
+- e construímos *um único IC* para a média de \( D \)
+
+#+attr_latex: :width .62\linewidth
+[[file:pdf_babel/a22_set1_ic.pdf]]
+
+\( \bar{D} = 0{,}88 \) s, IC 95% \( = [0{,}78;\ 0{,}98] \): \( A \) é mais
+rápido que \( B \) por \(\approx\) 0,9 s, com alta confiança
+
+* Por que funciona?
+
+\[
+\mathrm{Var}(B - A) = \mathrm{Var}(A) + \mathrm{Var}(B) - 2\,\mathrm{Cov}(A, B)
+\]
+
+#+latex: \pause
+
+No exemplo (40 setups):
+| Grandeza          | \( A \) | \( B \) | \( B - A \) |
+|-------------------+---------+---------+-------------|
+| desvio padrão     | 1,54    | 1,54    | *0,30*      |
+| semi-largura IC95 | 0,49    | 0,49    | *0,10*      |
+- correlação entre \( A_i \) e \( B_i \): 0,98 \(\leadsto\) a covariância
+  @@latex:``@@cancela@@latex:''@@ quase toda a variância
+
+#+latex: \vfill\pause
+
+- O efeito do setup é *comum* às duas alternativas e some na subtração
+- Explorar esses pontos em comum chama-se *blocking* (cada setup é um
+  *bloco*): é uma forma de *reduzir variância* sem mais experimentos
+- Em R: =t.test(B, A, paired = TRUE)= (vs. =t.test(B, A)= sem pareamento)
+
+* Precisamos de um modelo: subtrair ou dividir?
+
+Implicitamente assumimos um modelo *aditivo*:
+\[
+A_i = S_i + A'_i \qquad\qquad B_i = S_i + B'_i
+\]
+- \( S_i \): efeito do setup \( i \) (comum); \( A'_i, B'_i \): efeito
+  da alternativa + ruído
+- \( B_i - A_i = B'_i - A'_i \): o setup *desaparece* \(\leadsto\) subtrair é correto
+- Dividir seria má ideia: \( B_i / A_i = (S_i + B'_i)/(S_i + A'_i) \) ainda depende de \( S_i \)
+
+#+latex: \vfill\pause
+
+Mas se o efeito do bloco for *multiplicativo*:
+\[
+A_i = S_i \cdot A'_i \qquad\qquad B_i = S_i \cdot B'_i
+\]
+- ex.: máquina 2× mais lenta \(\leadsto\) ambas as versões 2× mais lentas
+- então use a *razão* \( B_i/A_i \) ou \( \log B_i - \log A_i \)
+  (que volta a ser aditivo)
+- Escolha olhando os dados: a diferença cresce com o tamanho do bloco?
+
+* Em R: calculando o IC pareado
+
+#+begin_src R :exports code
+library(tidyverse)
+df <- read_csv("a22_set1.csv")        # colunas A e B, uma linha por setup
+df$Diff <- df$B - df$A                # só faz sentido se pareado!
+dfgg <- df |> pivot_longer(everything(),
+                           names_to = "Alternativa", values_to = "Tempo")
+dfsum <- dfgg |> group_by(Alternativa) |>
+  summarize(num = n(), media = mean(Tempo), sd = sd(Tempo),
+            ic = 2 * sd / sqrt(num))
+dfsum
+#+end_src
+
+#+begin_example
+  Alternativa   num media    sd    ic
+1 A              40 4.90  1.54  0.488
+2 B              40 5.78  1.54  0.488
+3 Diff           40 0.880 0.304 0.0961
+#+end_example
+
+Ou simplesmente (IC com a \( t \) de Student):
+#+begin_example
+t.test(df$B, df$A, paired = TRUE)$conf.int    # [0.78, 0.98]
+#+end_example
+
+* Em R: gráfico com os ICs
+
+#+begin_src R :exports code
+ggplot(dfgg, aes(x = Alternativa, y = Tempo, color = Alternativa)) +
+  theme_bw() + scale_color_brewer(palette = "Set1") +
+  geom_jitter(alpha = .3, width = .1) +            # as observações
+  geom_errorbar(data = dfsum, width = .2,          # IC 95%
+                aes(y = media, ymin = media - ic, ymax = media + ic)) +
+  geom_point(data = dfsum, shape = 21, size = 3,   # a média
+             aes(y = media))
+#+end_src
+
+#+latex: \vfill
+
+- Sempre mostre as *observações* junto com a média e o IC
+- Para \( n < 30 \), troque o 2 por um quantil da \( t \) de Student
+  (veja adiante) ou use =t.test=
+
+* Demonstração ao vivo: =-O2= vs =-O3= no =mmul=
+
+Pergunta: compilar o =mmul.c= (multiplicação de matrizes por blocos)
+com =-O3= em vez de =-O2= deixa o programa mais rápido?
+
+#+latex: \vfill\pause
+
+Fonte de variabilidade *enorme*: as máquinas de vocês
+- processadores, caches, memória, frequência, carga\dots
+- um /notebook/ pode ser 3× mais lento que um /desktop/
+
+#+latex: \vfill\pause
+
+Desenho do experimento
+- cada aluno = uma máquina = *um bloco*
+- em cada máquina rodam *as duas* alternativas, várias rodadas
+- em cada rodada a *ordem* das alternativas é *aleatória* (=shuf=)
+- analisamos a diferença =-O3= \(-\) =-O2= *dentro* de cada máquina
+
+* Demonstração: o que cada um deve fazer
+
+Arquivos em =material/=: =mmul.c=, =blocking-ab.sh=, =blocking-ci.R=
+
+#+begin_src bash :exports code
+# use seu nome (sem espaços nem vírgulas) como identificador do bloco
+# argumentos: ID, nº de rodadas, ordem da matriz, tamanho do bloco
+FLAGS="-O2;-O3" ./blocking-ab.sh maria 5 1024 32 > maria.csv
+cat maria.csv
+#+end_src
+
+#+begin_example
+id,rep,ordem,n,bs,flags,tempo
+maria,1,1,1024,32,-O3,0.5439
+maria,1,2,1024,32,-O2,0.5968
+...
+#+end_example
+
+- Compila o =mmul.c= com cada conjunto de flags, roda cada alternativa
+  uma vez por rodada, em ordem aleatória; mede o tempo de parede
+- Leva poucos segundos; feche programas pesados, deixe na tomada
+- Envie o seu =.csv= para o professor (não edite o arquivo!)
+
+* Demonstração: a análise
+
+#+begin_src bash :exports code
+# todos os CSVs juntos; cada id (máquina) é um bloco
+Rscript blocking-ci.R turma.pdf *.csv
+# uma máquina só: cada rodada é um bloco
+Rscript blocking-ci.R --por-rep maria.pdf maria.csv
+#+end_src
+
+- Por máquina, as rodadas são resumidas pela *média*; as diferenças
+  são calculadas *dentro* de cada máquina
+- Painel da esquerda: tempos; da direita: diferenças pareadas
+  (o script usa IC de 99,7%: média \( \pm 3\,s/\sqrt{n} \))
+
+#+latex: \vfill\pause
+
+O que esperamos ver com várias máquinas
+- ICs dos tempos de =-O2= e =-O3= *largos* e sobrepostos (máquinas muito diferentes)
+- IC da diferença *estreito*: o efeito da máquina é removido
+- Se o IC da diferença contém 0: não há evidência de que =-O3= ajude
+
+* O que esperar com várias máquinas (simulação)
+
+#+attr_latex: :width \linewidth
+[[file:pdf_babel/a22_maquinas_sim.pdf]]
+
+15 máquinas *simuladas*, velocidades muito diferentes; =-O3= é 4% mais rápido em todas
+- Tempos: ICs sobrepostos, nada se conclui
+- Diferença: IC exclui 0, mas a diferença *cresce com a lentidão da
+  máquina* (efeito multiplicativo)
+- Razão: IC estreito (\( 0{,}965 \pm 0{,}013 \)) \(\leadsto\) =-O3= é 2--5% mais rápido
+
+* Resultado do piloto: uma máquina, 30 rodadas, 4 flags
+
+#+attr_latex: :width \linewidth
+[[file:pdf_babel/a22_piloto.pdf]]
+
+#+begin_example
+FLAGS="-O0;-O1;-O2;-O3" ./blocking-ab.sh maria 30 1024 32 > maria.csv   # ICs de 95%
+#+end_example
+
+| Média (s)       | =-O0= 2,04 | =-O1= 0,70 | =-O2= 0,66 | =-O3= 0,63 |
+- Só =-O1= \(-\) =-O0= é claramente diferente de 0 (\( -1{,}34 \pm 0{,}07 \) s)
+- =-O2= \(-\) =-O1= e =-O3= \(-\) =-O2=: ICs contêm 0 \(\leadsto\) nada se conclui
+
+* Piloto: o /blocking/ por rodada não ajudou!
+
+Desvio padrão (s) nas 30 rodadas da mesma máquina:
+
+| =-O0= | =-O1= | =-O2= | =-O3= | =-O3= \(-\) =-O2= |
+|-------+-------+-------+-------+-------------------|
+|  0,13 |  0,16 |  0,10 |  0,14 | *0,17*            |
+
+- A diferença pareada varia *mais* que cada alternativa!
+- Correlação entre =-O2= e =-O3= na mesma rodada: \( \approx -0{,}03 \) (nenhuma)
+
+#+latex: \vfill\pause
+
+\[
+\mathrm{Var}(B - A) = \mathrm{Var}(A) + \mathrm{Var}(B) - 2\,\underbrace{\mathrm{Cov}(A, B)}_{\approx\, 0}
+\]
+
+- *Blocking só reduz variância se \( A \) e \( B \) compartilham uma
+  fonte de variação* (\( \mathrm{Cov}(A,B) > 0 \))
+- Numa mesma máquina ociosa, o ruído de uma execução não @@latex:``@@passa@@latex:''@@ para
+  a seguinte: a rodada não é um bloco útil
+- Entre máquinas diferentes, o efeito da máquina é forte e comum
+  \(\leadsto\) aí o /blocking/ faz diferença
+
+* Randomização da ordem de execução
+
+Comparando \( A \) e \( B \) em várias configurações:
+- \( A, A, A, A, A, A \) e depois \( B, B, B, B, B, B \): *má ideia*
+  - qualquer mudança no sistema ao longo do tempo (temperatura,
+    /turbo/, carga, atualização do SO) é *confundida* com \( A \) vs \( B \)
+
+#+latex: \vfill\pause
+
+- Melhor: \( A, B,\ \ A, B,\ \ A, B,\ \ \dots \)
+- Ainda melhor: *sortear a ordem* em cada rodada (cara: \( A \) primeiro)
+  \[ A, B,\quad B, A,\quad B, A,\quad A, B, \dots \]
+  - e registrando a ordem, podemos verificar se @@latex:``@@ser o primeiro@@latex:''@@ muda algo
+  - é o que o =blocking-ab.sh= faz (=shuf=) e registra (coluna =ordem=)
+
+#+latex: \vfill\pause
+
+- Rode em *máquinas diferentes* e registre tudo sobre como o
+  experimento foi feito (máquina, compilador, data, carga\dots)
+
+#+begin_center
+Replica-se para *aumentar a confiabilidade*; randomiza-se para *reduzir o viés*.
+#+end_center
+
+* Replicação vs. pseudo-replicação
+
+Medir a *mesma configuração* várias vezes seguidas, na mesma máquina,
+*não é replicação*: é *pseudo-replicação*
+- as medições não são independentes (mesmo estado do sistema, mesma
+  alocação de memória, mesma temperatura\dots)
+- o IC fica artificialmente estreito \(\leadsto\) falsa confiança
+- e a conclusão vale só para aquela máquina, naquele momento
+
+#+latex: \vfill\pause
+
+Replicação de verdade: varie o que *deveria* ser irrelevante
+- outras máquinas, outros dias, outras entradas, outras ordens
+
+#+latex: \vfill\pause
+
+Se houver pseudo-replicação, você pode:
+- tirar a *média* das pseudo-réplicas e fazer a análise sobre as médias
+  (o =blocking-ci.R= faz isso por máquina)
+- analisar cada período (ou máquina) separadamente
+- usar análise de séries temporais
+
+* O que verificar: as hipóteses por trás do IC
+
+As hipóteses do TCL são fracas: *não* exigem que os dados sejam normais.
+
+#+latex: \vfill
+
+Mas, para serem réplicas, as medições:
+- devem ser *independentes* (cuidado com o aquecimento / /warm-up/)
+- *não* devem formar uma *série temporal* (o comportamento do sistema
+  pode mudar temporariamente)
+- *não* devem vir *do mesmo lugar* (a máquina pode ter um problema)
+- devem estar na *escala* certa (o que estou generalizando?)
+
+#+latex: \vfill\pause
+
+E mais:
+- \( n \) deve ser @@latex:``@@grande o bastante@@latex:''@@ para a média ser aproximadamente normal
+- o \( \sigma \) da fórmula é o *verdadeiro*, mas só temos o \( s \) *amostral*
+
+#+begin_center
+*Faça verificações gráficas!*
+#+end_center
+
+* Poucas réplicas: use a distribuição \( t \) de Student
+
+Com \( n \) pequeno, \( s \) é uma estimativa ruim de \( \sigma \)
+\(\leadsto\) o IC com \( z \) fica *estreito demais*
+
+\[
+\bar{x} \pm t_{1-\alpha/2;\,n-1} \frac{s}{\sqrt{n}}
+\]
+
+| \( n \)                       |    3 |    5 |   10 |   20 |   30 | \( \infty \) |
+|-------------------------------+------+------+------+------+------+--------------|
+| \( t_{0{,}975;\,n-1} \) (95%) | 4,30 | 2,78 | 2,26 | 2,09 | 2,05 |         1,96 |
+
+#+latex: \vfill\pause
+
+- Regra prática: com \( n \geq 30 \), \( z \approx t \) (mas \( n=30 \)
+  não é mágico: depende da assimetria dos dados)
+- Em R: =qt(0.975, df = n - 1)=, ou =t.test(x)$conf.int=
+- Na dúvida, *superestime* a variabilidade (ex.: use 3 em vez de 2,
+  como o =blocking-ci.R=)
+- Hipótese adicional para \( n \) pequeno: dados aproximadamente normais
+
+* Quantas réplicas?
+
+Q: Quantas réplicas devo fazer?
+- R1: quantas você puder pagar\dots
+- R2: @@latex:``@@30@@latex:''@@ (regra prática, *nem sempre funciona*)
+
+#+latex: \vfill\pause
+
+Melhor: faça um *piloto*, estime \( \bar{x} \) e \( s \), e calcule \( n \)
+para obter uma *precisão relativa* \( r \) desejada (Jain, cap. 13):
+\[
+z \frac{s}{\sqrt{n}} = r\,\bar{x}
+\quad\Longrightarrow\quad
+n = \left( \frac{z\, s}{r\, \bar{x}} \right)^2
+\]
+
+#+latex: \vfill\pause
+
+Exemplo (piloto, =-O2=): \( \bar{x} = 0{,}656 \) s, \( s = 0{,}097 \) s,
+queremos \( \pm 5\% \) com 95%:
+\[
+n = \left( \frac{1{,}96 \times 0{,}097}{0{,}05 \times 0{,}656} \right)^2 \approx 34 \text{ rodadas}
+\]
+
+* Quantas réplicas para *comparar*?
+
+Para detectar uma diferença \( d \) entre alternativas, a semi-largura
+do IC da diferença deve ser menor que \( d \):
+\[
+z \frac{s_D}{\sqrt{n}} < d
+\quad\Longrightarrow\quad
+n > \left( \frac{z\, s_D}{d} \right)^2
+\]
+
+#+latex: \vfill\pause
+
+Piloto, =-O3= vs =-O2=: \( d \approx 0{,}028 \) s, \( s_D \approx 0{,}17 \) s
+\[
+n > \left( \frac{1{,}96 \times 0{,}17}{0{,}028} \right)^2 \approx 142 \text{ rodadas}
+\]
+- Se for caro demais: *reduza a variância* (/blocking/, máquina mais
+  estável, problema maior) ou reduza o escopo\dots
+- \dots ou conclua que as alternativas são *praticamente indistinguíveis*
+- Abordagem *sequencial*: piloto \(\rightarrow\) estimativa de \( n \)
+  \(\rightarrow\) mais medições \(\rightarrow\) reavaliar
+
+* Verificações gráficas: independência e distribuição
+
+#+latex: \vspace{-1em}
+#+attr_latex: :width .9\linewidth
+[[file:pdf_babel/a22_4plot_iid.pdf]]
+#+latex: \pause\vspace{-.8em}
+#+attr_latex: :width .9\linewidth
+[[file:pdf_babel/a22_4plot_ar.pdf]]
+
+#+latex: \vspace{-.8em}{\footnotesize
+- *Sequência*: plana, sem deriva, espalhamento constante
+- *Defasagem*: sem estrutura (em (b), \( x_{i+1} \approx x_i \): dependência!)
+- *Histograma* / *QQ-plot*: forma da distribuição; vários modos
+  \(\leadsto\) há um *parâmetro escondido*
+#+latex: }
+
+* Dependência temporal, tendências e /outliers/
+
+#+attr_latex: :width \linewidth
+[[file:pdf_babel/a22_tendencias.pdf]]
+
+- (a) *Aquecimento*: caches frias, frequência da CPU, compilação JIT
+  \(\leadsto\) descarte o início ou modele a tendência
+- (b) *Periodicidade*: tarefas periódicas do SO, resolução do relógio
+  \(\leadsto\) estude o período; cuidado com a frequência de amostragem
+- (c) *Outliers*: interferência (outro processo, /swap/, interrupção)
+  \(\leadsto\) investigue a causa antes de descartar; registre o que foi removido
+- Dependência temporal \(\leadsto\) ICs *estreitos demais* (mesmo
+  problema da pseudo-replicação)
+
+* Mensagem final
+
+- Comparar alternativas = estimar a *diferença* com um IC
+  - ICs sobrepostos \( \neq \) @@latex:``@@são iguais@@latex:''@@: significa @@latex:``@@não sei@@latex:''@@
+- Reduzir o IC pela metade custa 4× mais experimentos
+  \(\leadsto\) prefira *reduzir a variância*
+- /Blocking/: pareie as observações pelo que \( A \) e \( B \) têm em
+  comum (setup, máquina, entrada) e analise \( B - A \) (ou \( B/A \))
+  - só ajuda se houver *covariância*: entenda de onde vem a variabilidade
+- *Randomize* a ordem; *replique* de verdade (não pseudo-replique)
+- Antes de confiar no IC: *olhe os dados* (sequência, defasagem,
+  histograma) e calcule *quantas réplicas* são necessárias
+
+#+latex: \vfill
+#+begin_center
+@@latex:``@@No amount of high-powered statistical analysis can turn a bad
+experiment into a good one.@@latex:''@@
+#+end_center
+
+* Referências
+
+#+latex: {\small
+- Capítulo 13 (/Comparing Systems Using Sample Data/). Jain, Raj. The
+  art of computer systems performance analysis: techniques for
+  experimental design, measurement, simulation, and modeling. New
+  York: John Wiley, c1991. ISBN 0471503363.
+- SMPE (/Scientific Methodology and Performance Evaluation/), aula
+  /Introduction to Statistics/ (partes /Evaluating and Comparing
+  Alternatives With Confidence Intervals/, /What should I take care
+  of?/ e /Design of Experiments/). Arnaud Legrand e Jean-Marc Vincent.
+  https://github.com/alegrand/SMPE
+- Crawley, Michael J. /Statistics: An Introduction Using R/. Wiley,
+  2005 (replicação, randomização e pseudo-replicação).
+- NIST/SEMATECH /e-Handbook of Statistical Methods/, seção 1.3.3.32
+  (/4-Plot/). https://www.itl.nist.gov/div898/handbook/
+#+latex: }
