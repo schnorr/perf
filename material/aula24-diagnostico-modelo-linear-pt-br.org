@@ -1,0 +1,637 @@
+# -*- coding: utf-8 -*-
+# -*- mode: org -*-
+#+startup: beamer overview indent
+#+LANGUAGE: pt-br
+#+TAGS: noexport(n)
+#+EXPORT_EXCLUDE_TAGS: noexport
+#+EXPORT_SELECT_TAGS: export
+
+#+Title: Análise de Desempenho de Sist. Comp.
+#+SubTitle: Diagnóstico e Uso do Modelo Linear
+#+Author: Prof. Lucas Mello Schnorr
+#+Date: \copyleft
+
+#+LaTeX_CLASS: beamer
+#+LaTeX_CLASS_OPTIONS: [xcolor=dvipsnames,10pt]
+#+OPTIONS: H:1 num:t toc:nil \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+#+LATEX_HEADER: \input{org-babel.tex}
+
+* Código R das figuras                                             :noexport:
+
+Figuras geradas pelos blocos abaixo, extraídos para
+=aula24-diagnostico-modelo-linear-pt-br-figs.R=. A partir de =material/=:
+
+#+begin_example
+emacs -batch aula24-diagnostico-modelo-linear-pt-br.org --funcall org-babel-tangle
+Rscript aula24-diagnostico-modelo-linear-pt-br-figs.R
+#+end_example
+
+#+begin_src R :results none :exports none :tangle aula24-diagnostico-modelo-linear-pt-br-figs.R
+## Preparação comum
+suppressMessages({library(ggplot2); library(patchwork)})
+theme_set(theme_bw(base_size = 13))
+
+## Dados reais do mmul (aula 23; linhas na ordem de execução)
+mmul <- read.csv("a23_mmul_tempos.csv")
+mmul$ordem <- seq_len(nrow(mmul))
+extra <- read.csv("a24_mmul_extrapolacao.csv")
+r1 <- lm(tempo ~ n, data = mmul)
+r3 <- lm(tempo ~ I(n^3), data = mmul)
+
+## Dados sintéticos (inspirados nos slides SMPE de A. Legrand)
+set.seed(42)
+x <- runif(50, min = -20, max = 60); a <- 5; b <- .5
+sint <- rbind(
+  data.frame(x = x, y = a + b * x + rnorm(50, sd = 2), tipo = "homocedástico"),
+  data.frame(x = x, y = a + b * x + rnorm(50, sd = .15) * (x + 20), tipo = "heterocedástico"),
+  data.frame(x = x, y = x^2 / 60 + a + rnorm(50, sd = 2), tipo = "quadrático"))
+sint$tipo <- factor(sint$tipo, levels = c("homocedástico", "heterocedástico", "quadrático"))
+sint <- do.call(rbind, lapply(split(sint, sint$tipo), function(s) {
+  m <- lm(y ~ x, data = s); s$ajustado <- fitted(m); s$residuo <- resid(m); s }))
+
+## Conjunto didático da aula 23
+toy <- data.frame(x = c(1, 2, 3, 5, 7, 9, 11, 13, 14, 15),
+                  y = c(3, 1, 5, 2, 6, 4, 7, 9, 8, 5))
+#+end_src
+
+#+begin_src R :results output graphics file :file pdf_babel/a24_mmul_recap.pdf :exports none :tangle aula24-diagnostico-modelo-linear-pt-br-figs.R
+nn <- data.frame(n = seq(100, 1300, by = 10))
+nn$lin <- predict(r1, nn); nn$cub <- predict(r3, nn)
+p <- ggplot(mmul, aes(n, tempo)) +
+  geom_point(alpha = .4, color = "blue") +
+  geom_line(data = nn, aes(y = lin, color = "tempo ~ n"), linewidth = 1) +
+  geom_line(data = nn, aes(y = cub, color = "tempo ~ I(n^3)"), linewidth = 1) +
+  scale_color_manual(values = c("tempo ~ n" = "orange", "tempo ~ I(n^3)" = "red")) +
+  labs(x = "Ordem da matriz (n)", y = "Tempo (s)", color = NULL) +
+  theme(legend.position = c(.25, .8))
+ggsave("pdf_babel/a24_mmul_recap.pdf", p, width = 5.5, height = 3.5)
+#+end_src
+
+#+begin_src R :results output graphics file :file pdf_babel/a24_lin_check.pdf :exports none :tangle aula24-diagnostico-modelo-linear-pt-br-figs.R
+p <- ggplot(subset(sint, tipo != "heterocedástico"), aes(x, residuo)) +
+  geom_hline(yintercept = 0, color = "gray40") +
+  geom_point() +
+  geom_smooth(method = "loess", formula = y ~ x, se = FALSE, color = "red") +
+  facet_wrap(~tipo) + labs(x = "x", y = "Resíduo")
+ggsave("pdf_babel/a24_lin_check.pdf", p, width = 7, height = 3.2)
+#+end_src
+
+#+begin_src R :results output graphics file :file pdf_babel/a24_homo_check.pdf :exports none :tangle aula24-diagnostico-modelo-linear-pt-br-figs.R
+p <- ggplot(subset(sint, tipo != "quadrático"), aes(ajustado, residuo)) +
+  geom_hline(yintercept = 0, color = "gray40") +
+  geom_point() +
+  facet_wrap(~tipo) + labs(x = "Valor ajustado", y = "Resíduo")
+ggsave("pdf_babel/a24_homo_check.pdf", p, width = 7, height = 3.2)
+#+end_src
+
+#+begin_src R :results output graphics file :file pdf_babel/a24_qq.pdf :exports none :tangle aula24-diagnostico-modelo-linear-pt-br-figs.R
+set.seed(7)
+q <- rbind(data.frame(amostra = rnorm(50), tipo = "normal"),
+           data.frame(amostra = rexp(50), tipo = "exponencial (assimétrica)"))
+q$tipo <- factor(q$tipo, levels = c("normal", "exponencial (assimétrica)"))
+p <- ggplot(q, aes(sample = amostra)) +
+  stat_qq() + stat_qq_line(color = "red") +
+  facet_wrap(~tipo, scales = "free_y") +
+  labs(x = "Quantis teóricos (normal)", y = "Quantis da amostra")
+ggsave("pdf_babel/a24_qq.pdf", p, width = 7, height = 3.2)
+#+end_src
+
+#+begin_src R :results output graphics file :file pdf_babel/a24_indep.pdf :exports none :tangle aula24-diagnostico-modelo-linear-pt-br-figs.R
+set.seed(3)
+ind <- rbind(data.frame(ordem = 1:60, residuo = rnorm(60), tipo = "independentes"),
+             data.frame(ordem = 1:60, residuo = as.numeric(arima.sim(list(ar = .85), 60)),
+                        tipo = "autocorrelacionados"))
+ind$tipo <- factor(ind$tipo, levels = c("independentes", "autocorrelacionados"))
+p <- ggplot(ind, aes(ordem, residuo)) +
+  geom_hline(yintercept = 0, color = "gray40") +
+  geom_line(color = "gray60") + geom_point() +
+  facet_wrap(~tipo) + labs(x = "Ordem de execução", y = "Resíduo")
+ggsave("pdf_babel/a24_indep.pdf", p, width = 7, height = 3.2)
+#+end_src
+
+#+begin_src R :results output graphics file :file pdf_babel/a24_plot_lm.pdf :exports none :tangle aula24-diagnostico-modelo-linear-pt-br-figs.R
+pdf("pdf_babel/a24_plot_lm.pdf", width = 7, height = 5.2)
+par(mfrow = c(2, 2), mar = c(4, 4, 2, 1))
+plot(r3)
+dev.off()
+#+end_src
+
+#+begin_src R :results output graphics file :file pdf_babel/a24_mmul_diag.pdf :exports none :tangle aula24-diagnostico-modelo-linear-pt-br-figs.R
+diag_plot <- function(m, titulo) {
+  f <- data.frame(ajustado = fitted(m), residuo = resid(m), ordem = mmul$ordem)
+  g1 <- ggplot(f, aes(ajustado, residuo)) + geom_hline(yintercept = 0, color = "gray40") +
+    geom_point(alpha = .5) +
+    geom_smooth(method = "loess", formula = y ~ x, se = FALSE, color = "red") +
+    labs(x = "Valor ajustado (s)", y = "Resíduo (s)", title = "Resíduos vs ajustados")
+  g2 <- ggplot(f, aes(sample = residuo)) + stat_qq(alpha = .5) + stat_qq_line(color = "red") +
+    labs(x = "Quantis teóricos", y = "Quantis dos resíduos", title = "Q-Q normal")
+  g3 <- ggplot(f, aes(ordem, residuo)) + geom_hline(yintercept = 0, color = "gray40") +
+    geom_point(alpha = .5) +
+    geom_smooth(method = "loess", formula = y ~ x, se = FALSE, color = "red") +
+    labs(x = "Ordem de execução", y = "Resíduo (s)", title = "Resíduos vs ordem")
+  (g1 | g2 | g3) + plot_annotation(title = titulo)
+}
+ggsave("pdf_babel/a24_mmul_diag_n.pdf", diag_plot(r1, "tempo ~ n"), width = 10, height = 3.4)
+ggsave("pdf_babel/a24_mmul_diag.pdf", diag_plot(r3, "tempo ~ I(n^3)"), width = 10, height = 3.4)
+#+end_src
+
+#+begin_src R :results output graphics file :file pdf_babel/a24_mmul_desvio.pdf :exports none :tangle aula24-diagnostico-modelo-linear-pt-br-figs.R
+s <- aggregate(tempo ~ n, data = mmul, FUN = function(t) c(media = mean(t), dp = sd(t)))
+s <- data.frame(n = s$n, media = s$tempo[, "media"], dp = s$tempo[, "dp"])
+p <- ggplot(s, aes(media, dp)) + geom_point(color = "blue", size = 2) +
+  geom_text(data = subset(s, n %in% c(512, 1024, 1152, 1280)), aes(label = paste0("n=", n)),
+            vjust = -0.8, size = 3.5) +
+  expand_limits(y = 0.18) +
+  labs(x = "Tempo médio de cada n (s)", y = "Desvio padrão (s)")
+ggsave("pdf_babel/a24_mmul_desvio.pdf", p, width = 4.5, height = 3.4)
+#+end_src
+
+#+begin_src R :results output graphics file :file pdf_babel/a24_decomp.pdf :exports none :tangle aula24-diagnostico-modelo-linear-pt-br-figs.R
+m <- lm(y ~ x, data = toy); toy$yh <- fitted(m); yb <- mean(toy$y)
+dd <- rbind(data.frame(toy, y0 = toy$y,  y1 = yb,     parte = "SST: y - média"),
+            data.frame(toy, y0 = toy$yh, y1 = yb,     parte = "SSR: ajustado - média"),
+            data.frame(toy, y0 = toy$y,  y1 = toy$yh, parte = "SSE: y - ajustado"))
+dd$parte <- factor(dd$parte, levels = unique(dd$parte))
+p <- ggplot(dd, aes(x, y)) +
+  geom_hline(yintercept = yb, color = "darkgreen", linetype = 2) +
+  geom_abline(intercept = coef(m)[1], slope = coef(m)[2], color = "red") +
+  geom_segment(aes(xend = x, y = y0, yend = y1), color = "black") +
+  geom_point(color = "blue") +
+  facet_wrap(~parte) + labs(x = "x", y = "y")
+ggsave("pdf_babel/a24_decomp.pdf", p, width = 8, height = 3)
+#+end_src
+
+#+begin_src R :results output graphics file :file pdf_babel/a24_anscombe.pdf :exports none :tangle aula24-diagnostico-modelo-linear-pt-br-figs.R
+ans <- do.call(rbind, lapply(1:4, function(i)
+  data.frame(x = anscombe[[paste0("x", i)]], y = anscombe[[paste0("y", i)]],
+             conjunto = paste("Conjunto", i))))
+p <- ggplot(ans, aes(x, y)) +
+  geom_point(color = "blue", size = 2) +
+  geom_smooth(method = "lm", formula = y ~ x, color = "red", fullrange = TRUE) +
+  facet_wrap(~conjunto, nrow = 1)
+ggsave("pdf_babel/a24_anscombe.pdf", p, width = 10, height = 3.2)
+#+end_src
+
+#+begin_src R :results output graphics file :file pdf_babel/a24_sinteticos.pdf :exports none :tangle aula24-diagnostico-modelo-linear-pt-br-figs.R
+p <- ggplot(sint, aes(x, y)) +
+  geom_point(color = "blue", alpha = .7) +
+  geom_smooth(method = "lm", formula = y ~ x, color = "red") +
+  facet_wrap(~tipo)
+ggsave("pdf_babel/a24_sinteticos.pdf", p, width = 9, height = 3.2)
+#+end_src
+
+#+begin_src R :results output graphics file :file pdf_babel/a24_quad_poly.pdf :exports none :tangle aula24-diagnostico-modelo-linear-pt-br-figs.R
+q <- subset(sint, tipo == "quadrático")
+mq <- lm(y ~ x + I(x^2), data = q)
+q$res2 <- resid(mq)
+xv <- data.frame(x = seq(-20, 60, by = .5)); xv$y <- predict(mq, xv)
+g1 <- ggplot(q, aes(x, y)) + geom_point(color = "blue") +
+  geom_smooth(method = "lm", formula = y ~ x, se = FALSE, color = "orange") +
+  geom_line(data = xv, color = "red", linewidth = 1) +
+  labs(title = "y ~ x (laranja) e y ~ x + I(x^2) (vermelho)")
+g2 <- ggplot(q, aes(x, res2)) + geom_hline(yintercept = 0, color = "gray40") + geom_point() +
+  geom_smooth(method = "loess", formula = y ~ x, se = FALSE, color = "red") +
+  labs(y = "Resíduo", title = "Resíduos do modelo quadrático")
+ggsave("pdf_babel/a24_quad_poly.pdf", g1 | g2, width = 9, height = 3.4)
+#+end_src
+
+#+begin_src R :results output graphics file :file pdf_babel/a24_predicao.pdf :exports none :tangle aula24-diagnostico-modelo-linear-pt-br-figs.R
+nv <- data.frame(n = seq(128, 1280, by = 8))
+ci <- as.data.frame(predict(r3, nv, interval = "confidence"))
+pi <- as.data.frame(predict(r3, nv, interval = "prediction"))
+bandas <- data.frame(n = nv$n, fit = ci$fit, cl = ci$lwr, cu = ci$upr, pl = pi$lwr, pu = pi$upr)
+p <- ggplot(bandas, aes(n)) +
+  geom_ribbon(aes(ymin = pl, ymax = pu, fill = "Predição (95%)"), alpha = .3) +
+  geom_ribbon(aes(ymin = cl, ymax = cu, fill = "Confiança da média (95%)"), alpha = .6) +
+  geom_point(data = mmul, aes(y = tempo), alpha = .4, size = 1) +
+  geom_line(aes(y = fit), color = "red") +
+  scale_fill_manual(values = c("Predição (95%)" = "skyblue", "Confiança da média (95%)" = "orange")) +
+  labs(x = "n", y = "Tempo (s)", fill = NULL) +
+  theme(legend.position = c(.3, .82))
+ggsave("pdf_babel/a24_predicao.pdf", p, width = 6, height = 3.6)
+#+end_src
+
+#+begin_src R :results output graphics file :file pdf_babel/a24_extrapolacao.pdf :exports none :tangle aula24-diagnostico-modelo-linear-pt-br-figs.R
+nv <- data.frame(n = seq(128, 2100, by = 8))
+pi <- as.data.frame(predict(r3, nv, interval = "prediction"))
+b <- data.frame(n = nv$n, fit = pi$fit, pl = pi$lwr, pu = pi$upr)
+b$lin <- predict(r1, nv)
+p <- ggplot(b, aes(n)) +
+  annotate("rect", xmin = 128, xmax = 1280, ymin = -Inf, ymax = Inf, alpha = .1, fill = "darkgreen") +
+  annotate("text", x = 700, y = 4, label = "faixa medida", color = "darkgreen") +
+  geom_ribbon(aes(ymin = pl, ymax = pu), fill = "skyblue", alpha = .5) +
+  geom_line(aes(y = fit, color = "tempo ~ I(n^3)")) +
+  geom_line(aes(y = lin, color = "tempo ~ n")) +
+  geom_point(data = mmul, aes(y = tempo), alpha = .3, size = 1) +
+  geom_point(data = extra, aes(y = tempo), color = "magenta", size = 2.5, shape = 17) +
+  scale_color_manual(values = c("tempo ~ I(n^3)" = "red", "tempo ~ n" = "orange")) +
+  labs(x = "n", y = "Tempo (s)", color = NULL) +
+  theme(legend.position = c(.2, .55))
+ggsave("pdf_babel/a24_extrapolacao.pdf", p, width = 6, height = 3.6)
+#+end_src
+
+* Recapitulando a aula 23
+
+#+latex: \begin{columns}\begin{column}{.5\linewidth}
+- Modelo: \( y_i = \beta_0 + \beta_1 x_i + \varepsilon_i \)
+- \( b_0, b_1 \) por *mínimos quadrados* (erro vertical)
+- Hipóteses sobre \( \varepsilon \): independentes, média zero, variância
+  constante, normais; \( x \) sem erro
+#+latex: \end{column}\begin{column}{.5\linewidth}
+#+attr_latex: :width \linewidth
+[[file:pdf_babel/a24_mmul_recap.pdf]]
+#+latex: \end{column}\end{columns}
+
+#+latex: \vfill\pause
+
+=mmul= (=gcc -O2=, i7-13800H, 19 valores de \( n \) \( \times \) 10 réplicas, ordem aleatória)
+
+| Modelo           | \( b_0 \) (s) | \( b_1 \)                     | \( s_e \) (s) | \( R^2 \) |
+|------------------+---------------+-------------------------------+---------------+-----------|
+| =tempo ~ n=      | \( -0{,}216 \)  | \( 6{,}96 \times 10^{-4} \) s     | 0,111         | 0,830     |
+| =tempo ~ I(n^3)= | \( 0{,}031 \)   | \( 3{,}99 \times 10^{-10} \) s    | 0,077         | 0,919     |
+
+#+latex: \vfill\pause
+
+Hoje
+- Como *verificar* as hipóteses (gráficos de resíduos)
+- O que o \( R^2 \) mede e *não* mede
+- Como *usar* o modelo para prever, com intervalos
+
+* Por que diagnosticar?
+
+- =lm()= *sempre* devolve uma reta, mesmo para dados absurdos
+- Erros padrão, ICs, \( p \)-valores e intervalos de predição *supõem* as hipóteses
+  - Hipóteses violadas \to intervalos com cobertura errada, conclusões erradas
+
+#+latex: \vfill\pause
+
+** Resíduos: nossa janela para os erros                             :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+- Não observamos \( \varepsilon_i \); observamos os *resíduos*
+  \( e_i = y_i - \hat y_i \), com \( \hat y_i = b_0 + b_1 x_i \)
+- Se o modelo está certo, os resíduos devem parecer *ruído sem estrutura*
+- Qualquer *padrão* nos resíduos é informação que o modelo não capturou
+
+#+latex: \vfill\pause
+
+| Hipótese                    | Gráfico                            |
+|-----------------------------+------------------------------------|
+| Linearidade                 | resíduos vs \( x \)                |
+| Variância constante         | resíduos vs valores ajustados      |
+| Normalidade                 | Q-Q plot dos resíduos              |
+| Independência               | resíduos vs ordem de execução      |
+
+* Linearidade: resíduos vs \( x \)
+
+#+attr_latex: :width .95\linewidth
+[[file:pdf_babel/a24_lin_check.pdf]]
+
+- Esquerda: nuvem sem tendência em torno de zero \to OK
+- Direita: padrão em U \to falta um termo (ex.: \( x^2 \)) no modelo
+  - Foi exatamente o que vimos com =tempo ~ n= no =mmul=
+
+#+latex: \vfill\pause
+
+Com vários preditores, seria preciso um gráfico por variável
+\to na prática, usa-se *resíduos vs valores ajustados* \( \hat y \)
+
+* Homocedasticidade: resíduos vs ajustados
+
+#+attr_latex: :width .95\linewidth
+[[file:pdf_babel/a24_homo_check.pdf]]
+
+- Esquerda: faixa de largura constante \to variância constante
+- Direita: formato de *funil* \to variância cresce com a resposta
+
+#+latex: \vfill\pause
+
+Muito comum em desempenho: o *ruído é proporcional* ao tempo
+(interferências, frequência variável, escalonamento de núcleos)
+- Remédios: transformar \( y \) (ex.: \( \log y \)), mínimos quadrados *ponderados* \to aula 25
+
+* Normalidade: gráfico quantil-quantil (Q-Q)
+
+#+attr_latex: :width .95\linewidth
+[[file:pdf_babel/a24_qq.pdf]]
+
+- Quantis da amostra vs quantis de uma normal teórica
+- Pontos sobre a reta \to compatível com a normal
+- Curvatura nas pontas \to caudas pesadas ou assimetria
+
+#+latex: \vfill\pause
+
+- Normalidade é a hipótese *menos crítica* para estimar \( b_0, b_1 \) (Gauss--Markov)
+- Mas importa para ICs com \( N \) pequeno e, sobretudo, para *intervalos de predição*
+
+* Independência: resíduos vs ordem de execução
+
+#+attr_latex: :width .95\linewidth
+[[file:pdf_babel/a24_indep.pdf]]
+
+- Ondas/tendências na sequência \to erros dependentes (aquecimento,
+  /throttling/ térmico, outras cargas na máquina, ...)
+- Por isso guardamos a *ordem de execução* e *aleatorizamos* (aula 22)
+  - Aleatorizar não remove a deriva, mas impede que ela se confunda com o efeito de \( x \)
+
+* Em R: =plot(modelo)=
+
+#+begin_src R :exports code
+r3 <- lm(tempo ~ I(n^3), data = d)
+par(mfrow = c(2, 2)); plot(r3)
+#+end_src
+
+#+attr_latex: :width .72\linewidth
+[[file:pdf_babel/a24_plot_lm.pdf]]
+
+\vspace{-.5em}
+@@latex:{\footnotesize@@ Residuals vs Fitted, Q-Q, Scale-Location (\( \sqrt{|e_i|} \) padronizado: variância),
+Residuals vs Leverage (pontos influentes)@@latex:}@@
+
+* Diagnóstico do =mmul=: =tempo ~ n=
+
+#+attr_latex: :width \linewidth
+[[file:pdf_babel/a24_mmul_diag_n.pdf]]
+
+- Resíduos vs ajustados: *curvatura* clara \to linearidade violada (já sabíamos)
+- Q-Q: cauda direita pesada
+- Este modelo deve ser descartado, apesar de \( R^2 = 0{,}83 \)
+
+* Diagnóstico do =mmul=: =tempo ~ I(n^3)=
+
+#+attr_latex: :width \linewidth
+[[file:pdf_babel/a24_mmul_diag.pdf]]
+
+#+latex: \pause
+
+1. *Linearidade*: aceitável --- a curvatura sumiu
+2. *Variância*: cresce com o tempo ajustado (funil) \to heterocedástico
+3. *Normalidade*: assimetria à direita (execuções ``lentas'' ocasionais); Shapiro--Wilk \( p < 10^{-12} \)
+4. *Independência*: os resíduos *diminuem* ao longo da coleta
+   (autocorrelação de lag 1 \( \approx 0{,}33 \)): a máquina estava mais
+   carregada no início
+
+* =mmul=: a dispersão cresce com o tempo
+
+#+latex: \begin{columns}\begin{column}{.5\linewidth}
+#+attr_latex: :width \linewidth
+[[file:pdf_babel/a24_mmul_desvio.pdf]]
+#+latex: \end{column}\begin{column}{.48\linewidth}
+- Cada ponto: um valor de \( n \) (10 réplicas)
+- Desvio padrão *aumenta* com a média: correlação \( \approx 0{,}73 \)
+- Coef. de variação entre \( \approx 5\% \) e \( \approx 40\% \)
+#+latex: \end{column}\end{columns}
+
+#+latex: \vfill\pause
+
+O que isso significa na prática
+- \( b_0, b_1 \) ainda são não viesados, mas os *erros padrão* (e ICs) ficam imprecisos
+- Um único \( s_e = 0{,}077 \) s é grande demais para \( n = 128 \) (tempo \( \approx 3 \) ms!)
+  e pequeno demais para \( n = 1280 \)
+- \( n = 512 \) e \( n = 1024 \) (potências de 2) ficam acima do modelo:
+  provável efeito de cache (conflitos de associatividade), não ruído
+
+#+latex: \vfill\pause
+Sugestão: modelar \( \log(\text{tempo}) \sim \log(n) \) \to aula 25
+
+* Decomposição da variância
+
+Quanto da variação de \( y \) a reta explica?
+
+#+attr_latex: :width .95\linewidth
+[[file:pdf_babel/a24_decomp.pdf]]
+
+#+latex: \pause
+\vspace{-1em}
+#+begin_export latex
+\[
+\underbrace{\sum_{i=1}^N (y_i - \bar y)^2}_{SST\ \text{(total)}} =
+\underbrace{\sum_{i=1}^N (\hat y_i - \bar y)^2}_{SSR\ \text{(regressão)}} +
+\underbrace{\sum_{i=1}^N (y_i - \hat y_i)^2}_{SSE\ \text{(erro)}}
+\]
+#+end_export
+
+- \( SSR \): variação *explicada* pela reta; \( SSE \): variação *não explicada*
+- Vale porque \( \sum e_i = 0 \) e os resíduos são não correlacionados com \( \hat y \)
+- Exemplo simples: \( 60 = 33{,}0 + 27{,}0 \)
+
+* Coeficiente de determinação \( R^2 \)
+
+#+begin_export latex
+\[
+R^2 = \frac{SSR}{SST} = 1 - \frac{SSE}{SST}
+    = 1 - \frac{\text{erro conhecendo } x}{\text{erro sem conhecer } x}
+\]
+#+end_export
+
+- \( 0 \le R^2 \le 1 \); na regressão simples, \( R^2 = r_{xy}^2 \) (correlação ao quadrado)
+- Exemplo simples: \( R^2 = 33{,}0 / 60 = 0{,}55 \)
+
+#+latex: \vfill\pause
+
+Em R: =anova(r3)=
+#+begin_example
+           Df  Sum Sq Mean Sq F value    Pr(>F)
+I(n^3)      1 12.5027 12.5027  2127.4 < 2.2e-16
+Residuals 188  1.1049  0.0059
+#+end_example
+
+\( R^2 = 12{,}50 / (12{,}50 + 1{,}10) = 0{,}919 \) \quad
+(=tempo ~ n=: \( 11{,}30 / 13{,}61 = 0{,}830 \))
+
+* Os perigos do \( R^2 \)
+
+- \( R^2 \) mede *quanta* variância é explicada, *não* se o modelo está correto
+  - =tempo ~ n= tem \( R^2 = 0{,}83 \) e está *errado* (curvatura)
+- \( R^2 \) baixo pode significar ruído alto *ou* modelo ruim
+  - Em física/engenharia, 0,6 é baixo; em biologia ou ciências sociais, pode ser bom
+- Adicionar preditores *sempre* aumenta \( R^2 \) \to \( R^2 \) *ajustado* penaliza
+  parâmetros; prefira modelos simples (parcimônia, aula 25)
+- \( R^2 \) depende da *faixa* de \( x \): faixa larga \to \( R^2 \) alto, mesmo com ruído igual
+- Não diz nada sobre independência, normalidade, heterocedasticidade
+
+#+latex: \vfill\pause
+
+#+begin_center
+*Sempre olhe os gráficos!* O exemplo clássico: o quarteto de Anscombe
+#+end_center
+
+* O quarteto de Anscombe (1973)
+
+Quatro conjuntos (=data(anscombe)= no R base), 11 pontos cada:
+
+| Conjunto | \( \bar x \) | \( s_x^2 \) | \( \bar y \) | \( s_y^2 \) | \( r_{xy} \) | Reta                   | \( R^2 \) |
+|----------+--------------+-------------+--------------+-------------+--------------+------------------------+-----------|
+|        1 |            9 |          11 |         7,50 |        4,13 |        0,816 | 3,00 + 0,500 \( x \)     |     0,667 |
+|        2 |            9 |          11 |         7,50 |        4,13 |        0,816 | 3,00 + 0,500 \( x \)     |     0,666 |
+|        3 |            9 |          11 |         7,50 |        4,12 |        0,816 | 3,00 + 0,500 \( x \)     |     0,666 |
+|        4 |            9 |          11 |         7,50 |        4,12 |        0,817 | 3,00 + 0,500 \( x \)     |     0,667 |
+
+#+latex: \vfill\pause
+
+#+begin_center
+Mesmas médias, variâncias, correlação, reta e \( R^2 \)... *os dados são iguais?*
+#+end_center
+
+* O quarteto de Anscombe: olhe os dados!
+
+#+attr_latex: :width \linewidth
+[[file:pdf_babel/a24_anscombe.pdf]]
+
+#+latex: \pause
+
+1. Relação linear com ruído: o único caso em que o modelo é adequado
+2. Relação *curva* (quadrática): resíduos em U
+3. Linear perfeita, exceto por *um ponto aberrante* que puxa a reta
+4. \( x \) quase constante: um único ponto (*alavanca*) determina a inclinação
+
+#+latex: \vfill\pause
+Lição de projeto de experimentos: a *distribuição dos \( x \)* importa
+- Para testar linearidade: \( x \) espalhados uniformemente na faixa
+- Para precisão máxima da inclinação: valores extremos de \( x \)
+
+* Três conjuntos sintéticos
+
+#+attr_latex: :width \linewidth
+[[file:pdf_babel/a24_sinteticos.pdf]]
+
+#+latex: \pause
+
+| Dados           | \( b_0 \) | \( b_1 \) | \( R^2 \) | Problema                          |
+|-----------------+-----------+-----------+-----------+-----------------------------------|
+| homocedástico   |      4,91 |     0,499 |      0,97 | nenhum (gerado com \( \beta_1 = \) 0,5) |
+| heterocedástico |      6,36 |     0,389 |      0,66 | variância cresce com \( x \)      |
+| quadrático      |      6,08 |     0,766 |      0,80 | modelo errado (curvatura)         |
+
+#+latex: \vfill\pause
+- O \( R^2 \) do quadrático (0,80) é *maior* que o do heterocedástico (0,66), mas o
+  modelo do quadrático é que está *errado*
+- A banda (IC da reta) do heterocedástico é igual em toda a faixa: errado também
+
+* Quadrático: regressão polinomial
+
+#+begin_src R :exports code
+rq <- lm(y ~ x + I(x^2), data = quad)   # ainda linear nos parâmetros!
+#+end_src
+
+#+begin_example
+             Estimate Std. Error t value Pr(>|t|)
+(Intercept)  4.4485532  0.3861732   11.52 2.75e-15
+x           -0.0023807  0.0238219   -0.10    0.921
+I(x^2)       0.0170024  0.0004741   35.86  < 2e-16
+Residual standard error: 1.77 on 47 degrees of freedom
+Multiple R-squared:  0.993,	Adjusted R-squared:  0.9927
+#+end_example
+
+#+attr_latex: :width .9\linewidth
+[[file:pdf_babel/a24_quad_poly.pdf]]
+
+\vspace{-.5em}
+@@latex:{\footnotesize@@ Verdade: \( y = 5 + x^2/60 \) (\( 1/60 \approx 0{,}0167 \)); o termo em \( x \) não é significativo@@latex:}@@
+
+* Usando o modelo: predição
+
+#+begin_src R :exports code
+novo <- data.frame(n = 1000)
+predict(r3, novo)                                          # 0.430 s
+predict(r3, novo, interval = "confidence", level = 0.95)   # [0.417; 0.443]
+predict(r3, novo, interval = "prediction", level = 0.95)   # [0.279; 0.582]
+#+end_src
+
+#+latex: \vfill\pause
+
+Duas perguntas diferentes para \( x_p = 1000 \):
+1. Qual o *tempo médio* \( \mathbb{E}[y \mid x_p] \)? \to *intervalo de confiança* (da média)
+2. Quanto vai levar a *próxima execução*? \to *intervalo de predição*
+
+#+latex: \vfill\pause
+
+- A próxima execução tem a incerteza da reta *e* o ruído \( \varepsilon \) de uma observação
+- \to O intervalo de predição é sempre *mais largo*
+
+* IC da média vs intervalo de predição: fórmulas
+
+Desvio padrão da predição em \( x_p \) (Jain, cap. 14), com \( S_{xx} = \sum x_i^2 - N \bar x^2 \):
+
+#+begin_export latex
+\begin{align*}
+\text{média (}m\to\infty\text{):}\quad
+s_{\hat y_p} &= s_e \sqrt{\frac{1}{N} + \frac{(x_p - \bar x)^2}{S_{xx}}} \\
+\text{média de } m \text{ novas obs.:}\quad
+s_{\hat y_{mp}} &= s_e \sqrt{\frac{1}{m} + \frac{1}{N} + \frac{(x_p - \bar x)^2}{S_{xx}}}
+\end{align*}
+#+end_export
+
+Intervalo: \( \hat y_p \mp t_{[1-\alpha/2;\ N-2]}\; s \) \quad (\( m = 1 \): intervalo de predição do R)
+
+#+latex: \vfill\pause
+
+- O termo \( (x_p - \bar x)^2 \): incerteza *cresce* ao se afastar do centro dos dados
+- Mais dados (\( N \uparrow \)) estreitam o IC da média até zero
+- O intervalo de predição *nunca* fica mais estreito que \( \approx \pm 2 s_e \): o ruído
+  do sistema não desaparece com mais medições
+
+* As duas bandas no =mmul=
+
+#+attr_latex: :width .8\linewidth
+[[file:pdf_babel/a24_predicao.pdf]]
+
+- IC da média (laranja): estreito; predição (azul): largura \( \approx \pm 0{,}15 \) s em toda a faixa
+- Para \( n \) pequeno, a banda de predição inclui tempos *negativos*;
+  para \( n \) grande, vários pontos ficam *fora* dela
+- \to Consequência direta da heterocedasticidade: a banda de largura constante está errada
+
+* Extrapolação: o perigo de prever fora da faixa
+
+#+latex: \begin{columns}\begin{column}{.52\linewidth}
+#+attr_latex: :width \linewidth
+[[file:pdf_babel/a24_extrapolacao.pdf]]
+#+latex: \end{column}\begin{column}{.46\linewidth}\footnotesize
+Novas medições (\( \blacktriangle \)), 3 réplicas cada (s):
+
+| \( n \) | Prev. | IP 95%       | Medido |
+|---------+-------+--------------+--------|
+|    1536 |  1,48 | [1,32; 1,64] |   1,84 |
+|    2048 |  3,46 | [3,26; 3,67] |   4,16 |
+#+latex: \end{column}\end{columns}
+
+#+latex: \vfill\pause
+
+- O modelo \( n^3 \) *subestima* em 20--25%: valores medidos *fora* do intervalo de predição!
+  - Matrizes maiores não cabem mais nas caches \to custo por operação *muda*
+- O modelo =tempo ~ n= previa 1,21 s para \( n = 2048 \) (erro de 3,4\( \times \))
+- Os intervalos só valem *dentro* da faixa medida e *se o modelo vale lá fora*
+- Precisa prever em \( n = 2048 \)? *Meça* perto de \( n = 2048 \)
+
+* Mensagens principais
+
+1. Ajustar é fácil; *verificar* é o trabalho de verdade
+   - Resíduos vs \( x \)/ajustados, Q-Q plot, resíduos vs ordem
+2. Um \( R^2 \) alto *não* garante um modelo correto (=mmul= =tempo ~ n=, Anscombe)
+3. Use conhecimento do sistema para escolher a forma do modelo (\( n^3 \))
+4. Distinga *IC da média* de *intervalo de predição*
+5. Não extrapole sem validar: o sistema pode mudar de regime (caches!)
+
+#+latex: \vfill\pause
+
+** No =mmul=, ainda falta                                            :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+- Tratar a heterocedasticidade: \( \log(\text{tempo}) \sim \log(n) \) estima o expoente
+  (com estes dados, \( \hat k \approx 2{,}42 \), abaixo de 3!)
+- Efeito das potências de 2, vários fatores, interações \to *aula 25*
+- Modelos lineares de custo calibrados e injetados em simuladores \to aula 28 (HPL / =dgemm=)
+
+* Referências
+
+- Raj Jain. *The Art of Computer Systems Performance Analysis*. Wiley, 1991.
+  - Cap. 14: /Simple Linear Regression Models/ (alocação de variação,
+    ICs para predições, inspeção visual das hipóteses)
+- Arnaud Legrand, Jean-Marc Vincent. Slides do curso /Scientific
+  Methodology and Performance Evaluation/ (SMPE), Univ. Grenoble Alpes:
+  /Linear Regression/ (adaptados e traduzidos)
+- F. J. Anscombe. Graphs in Statistical Analysis. /The American Statistician/, 27(1):17--21, 1973.
+- Dados do =mmul=: =a23_mmul_tempos.csv= e =a24_mmul_extrapolacao.csv=, coletados com =a23_coleta_mmul.sh=
