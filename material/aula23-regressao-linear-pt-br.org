@@ -58,7 +58,7 @@ salva_toy <- function(p, f) ggsave(f, p, width = 3.4, height = 3.4)
 #+begin_src R :results output graphics file :file pdf_babel/a23_mmul_dados.pdf :exports none :tangle aula23-regressao-linear-pt-br-figs.R
 p <- ggplot(mmul, aes(n, tempo)) +
   geom_point(alpha = .5, color = "blue") +
-  labs(x = "Ordem da matriz (n)", y = "Tempo de parede (s)")
+  labs(x = "Ordem da matriz (n)", y = "Tempo wallclock (s)")
 ggsave("pdf_babel/a23_mmul_dados.pdf", p, width = 6, height = 3.4)
 #+end_src
 
@@ -243,7 +243,7 @@ Programa =mmul.c= (multiplicação de matrizes \( n \times n \) por blocos, já 
 #+latex: \vfill\pause
 
 Coleta (script =a23_coleta_mmul.sh=, dados em =a23_mmul_tempos.csv=)
-- Compilado com =gcc -O2=, bloco 32, *tempo de parede* medido com =date +%s%N=
+- Compilado com =gcc -O2=, bloco 32, *tempo wallclock* medido com =date +%s%N=
 - \( n \in \{128, 192, 256, \dots, 1280\} \) (19 níveis, passo 64)
 - 10 réplicas de cada \( n \) \to 190 execuções, *em ordem aleatória* (=shuf=)
 - Máquina: notebook Intel Core i7-13800H (núcleos P e E), Linux,

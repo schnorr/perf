@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Coleta de dados para as aulas 23/24 (regressão linear):
-# tempo de parede do mmul.c (gcc -O2, bloco 32) em função da ordem n.
+# tempo wallclock do mmul.c (gcc -O2, bloco 32) em função da ordem n.
 #
 # Uso: ./a23_coleta_mmul.sh [REPETICOES] > a23_mmul_tempos.csv
 #   n varia de 128 a 1280 em passos de 64 (ou a lista na variável NS);
@@ -23,7 +23,7 @@ trap 'rm -rf "$TMP"' EXIT
 
 "$CC" -O2 -o "$TMP/mmul" "$DIR/mmul.c"
 
-# Mede o tempo de parede (s) de uma execução com ordem $1.
+# Mede o tempo wallclock (s) de uma execução com ordem $1.
 mede() {
   local ini fim
   ini=$(date +%s%N)
