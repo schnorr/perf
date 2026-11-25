@@ -380,7 +380,6 @@ Residuals vs Leverage (pontos influentes)@@latex:}@@
 #+latex: \end{column}\begin{column}{.48\linewidth}
 - Cada ponto: um valor de \( n \) (10 réplicas)
 - Desvio padrão *aumenta* com a média: correlação \( \approx 0{,}73 \)
-- Coef. de variação entre \( \approx 5\% \) e \( \approx 40\% \)
 #+latex: \end{column}\end{columns}
 
 #+latex: \vfill\pause
