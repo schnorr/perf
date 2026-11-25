@@ -369,9 +369,8 @@ Residuals vs Leverage (pontos influentes)@@latex:}@@
 1. *Linearidade*: aceitável --- a curvatura sumiu
 2. *Variância*: cresce com o tempo ajustado (funil) \to heterocedástico
 3. *Normalidade*: assimetria à direita (execuções ``lentas'' ocasionais); Shapiro--Wilk \( p < 10^{-12} \)
-4. *Independência*: os resíduos *diminuem* ao longo da coleta
-   (autocorrelação de lag 1 \( \approx 0{,}33 \)): a máquina estava mais
-   carregada no início
+4. *Independência*: os resíduos *diminuem* ao longo da coleta:
+   a máquina estava mais carregada no início
 
 * =mmul=: a dispersão cresce com o tempo
 
