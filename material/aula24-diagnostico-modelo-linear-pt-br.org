@@ -379,7 +379,7 @@ Residuals vs Leverage (pontos influentes)@@latex:}@@
 [[file:pdf_babel/a24_mmul_desvio.pdf]]
 #+latex: \end{column}\begin{column}{.48\linewidth}
 - Cada ponto: um valor de \( n \) (10 réplicas)
-- Desvio padrão *aumenta* com a média: correlação \( \approx 0{,}73 \)
+- Desvio padrão *aumenta* com a média
 #+latex: \end{column}\end{columns}
 
 #+latex: \vfill\pause
