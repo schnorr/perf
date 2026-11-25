@@ -372,28 +372,6 @@ Residuals vs Leverage (pontos influentes)@@latex:}@@
 4. *Independência*: os resíduos *diminuem* ao longo da coleta:
    a máquina estava mais carregada no início
 
-* =mmul=: a dispersão cresce com o tempo
-
-#+latex: \begin{columns}\begin{column}{.5\linewidth}
-#+attr_latex: :width \linewidth
-[[file:pdf_babel/a24_mmul_desvio.pdf]]
-#+latex: \end{column}\begin{column}{.48\linewidth}
-- Cada ponto: um valor de \( n \) (10 réplicas)
-- Desvio padrão *aumenta* com a média
-#+latex: \end{column}\end{columns}
-
-#+latex: \vfill\pause
-
-O que isso significa na prática
-- \( b_0, b_1 \) ainda são não viesados, mas os *erros padrão* (e ICs) ficam imprecisos
-- Um único \( s_e = 0{,}077 \) s é grande demais para \( n = 128 \) (tempo \( \approx 3 \) ms!)
-  e pequeno demais para \( n = 1280 \)
-- \( n = 512 \) e \( n = 1024 \) (potências de 2) ficam acima do modelo:
-  provável efeito de cache (conflitos de associatividade), não ruído
-
-#+latex: \vfill\pause
-Sugestão: modelar \( \log(\text{tempo}) \sim \log(n) \) \to aula 25
-
 * Decomposição da variância
 
 Quanto da variação de \( y \) a reta explica?
